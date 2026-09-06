@@ -182,7 +182,10 @@ final class AudioLifecycleTests: XCTestCase {
             }
             XCTAssertEqual(reason, L("error.audio.reason.sckTimeout", 0))
         }
-        XCTAssertLessThan(Date().timeIntervalSince(began), 0.5)
+        // Проверяем ОГРАНИЧЕННОСТЬ ожидания, а не его точную длительность:
+        // порог заведомо ниже 2с, которые проспала бы операция без таймаута,
+        // но с запасом на планировщик медленного раннера.
+        XCTAssertLessThan(Date().timeIntervalSince(began), 1.5)
         await waitUntil { cancelled.value }
         XCTAssertFalse(source.isRunning)
         source.stop()
@@ -209,7 +212,7 @@ final class AudioLifecycleTests: XCTestCase {
 
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
-        await waitUntil(timeout: 1) { engine.pipelineStalled }
+        await waitUntil(timeout: 3) { engine.pipelineStalled }
 
         XCTAssertTrue(engine.needsRestart)
         XCTAssertEqual(engine.state, .error)
@@ -220,19 +223,46 @@ final class AudioLifecycleTests: XCTestCase {
     }
 
     func testWatchdogAcceptsFreshProgressWithoutFalseStall() async throws {
+        // Время сторожа полностью виртуальное: и монотонные часы, и его «сон»
+        // под контролем теста. Реальные задержки не участвуют, поэтому
+        // медленная машина не может превратить свежий прогресс в зависание.
+        let clock = TestWatchdogClock()
         let core = TestCore()
         let capture = TestCapture()
         let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 0.08, watchdogPollS: 0.01)
+                                        watchdogTimeoutS: 0.08, watchdogPollS: 0.01,
+                                        monotonicClock: { clock.now },
+                                        watchdogSleep: { _ in await clock.sleep() })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
+        await waitUntil { clock.sleepCount >= 1 }
 
+        // Десять проверок сторожа. Каждая видит метрику возрастом 0.02с — это
+        // МЕНЬШЕ таймаута 0.08с, а суммарно проходит 0.2с, то есть ВДВОЕ
+        // больше таймаута. Если бы свежая метрика не считалась признаком
+        // жизни, возраст дорос бы до 0.08с и сторож соврал бы на пятом шаге.
         for index in 0..<10 {
+            let checksBefore = clock.sleepCount
             engine.receive(.metrics(snapshot: Self.snapshot(elapsed: Float(index))))
-            try await Task.sleep(nanoseconds: 15_000_000)
+            clock.advance(0.02)
+            clock.releaseOneCheck()
+            await waitUntil { clock.sleepCount > checksBefore }
+            XCTAssertFalse(engine.pipelineStalled,
+                           "свежая метрика на шаге \(index) не должна читаться как зависание")
         }
-        XCTAssertFalse(engine.pipelineStalled)
+        XCTAssertEqual(engine.state, .recording)
+
+        // Контроль настройки: сторож всё это время был живым и вооружённым —
+        // стоит метрикам замолчать на время больше таймаута, он срабатывает.
+        // Без этой проверки «нет ложного зависания» доказывалось бы и
+        // выключенным сторожем.
+        clock.advance(0.2)
+        clock.releaseOneCheck()
+        await waitUntil { engine.pipelineStalled }
+
         engine.stop()
+        // Отпускаем спящего сторожа: отменённая задача обязана выйти сама.
+        clock.releaseOneCheck()
     }
 
     func testTransientQueueFullWarningKeepsRecordingAndCapture() async throws {
@@ -278,7 +308,7 @@ final class AudioLifecycleTests: XCTestCase {
                            generation: generation)
             try await Task.sleep(nanoseconds: 10_000_000)
         }
-        await waitUntil(timeout: 1) { engine.pipelineStalled }
+        await waitUntil(timeout: 3) { engine.pipelineStalled }
         XCTAssertTrue(engine.needsRestart)
         XCTAssertFalse(capture.running)
     }
@@ -302,7 +332,7 @@ final class AudioLifecycleTests: XCTestCase {
         XCTAssertFalse(engine.pipelineStalled)
 
         monotonic = 100_000_000
-        await waitUntil(timeout: 1) { engine.pipelineStalled }
+        await waitUntil(timeout: 3) { engine.pipelineStalled }
     }
 
     func testStaleStateEventCannotOverwriteActiveRecording() async throws {
@@ -554,7 +584,7 @@ final class AudioLifecycleTests: XCTestCase {
         // ре-арма падают, и Engine обязан явно перезапустить сессию.
         capture.failStartsRemaining = 3
         engine.resumeAfterWake()
-        await waitUntil(timeout: 3) { engine.state == .recording && capture.running }
+        await waitUntil(timeout: 5) { engine.state == .recording && capture.running }
         XCTAssertFalse(engine.isSuspendedForSleep)
         XCTAssertFalse(engine.needsRestart)
         XCTAssertEqual(core.startCalls, 2)
@@ -672,8 +702,12 @@ final class AudioLifecycleTests: XCTestCase {
                                droppedIntervals: droppedIntervals)
     }
 
+    /// Ожидание УСЛОВИЯ с дедлайном (а не фиксированная пауза): дедлайн взят с
+    /// большим запасом, потому что на медленном раннере CI планировщик отдаёт
+    /// главный актор заметно позже. Проверку это не ослабляет — условие всё
+    /// равно обязано стать истинным.
     private func waitUntil(
-        timeout: TimeInterval = 2,
+        timeout: TimeInterval = 5,
         _ predicate: @escaping @MainActor () -> Bool
     ) async {
         let deadline = Date().addingTimeInterval(timeout)
@@ -689,6 +723,64 @@ private enum TestError: Error { case failed }
 
 private final class EventLog {
     var values: [String] = []
+}
+
+/// Виртуальное время сторожа конвейера: монотонные часы и его «сон» целиком
+/// под контролем теста.
+///
+/// Сторож просыпается ровно столько раз, сколько разрешил тест
+/// (`releaseOneCheck`), а часы двигает только `advance`. Поэтому результат не
+/// зависит ни от скорости машины, ни от точности `Task.sleep`.
+private final class TestWatchdogClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var nowNs: UInt64 = 0
+    private var sleeps = 0
+    private var waiter: CheckedContinuation<Void, Never>?
+    private var credits = 0
+
+    /// Показание монотонных часов (наносекунды).
+    var now: UInt64 {
+        lock.lock(); defer { lock.unlock() }
+        return nowNs
+    }
+
+    /// Сколько раз сторож уходил спать. Растёт ПОСЛЕ очередной проверки,
+    /// поэтому служит признаком «проверка завершена».
+    var sleepCount: Int {
+        lock.lock(); defer { lock.unlock() }
+        return sleeps
+    }
+
+    /// Двигает виртуальное время вперёд.
+    func advance(_ seconds: TimeInterval) {
+        lock.lock(); nowNs &+= UInt64(seconds * 1_000_000_000); lock.unlock()
+    }
+
+    /// Seam вместо `Task.sleep`: сторож ждёт разрешения теста.
+    func sleep() async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            lock.lock()
+            sleeps += 1
+            if credits > 0 {
+                credits -= 1
+                lock.unlock()
+                continuation.resume()
+            } else {
+                waiter = continuation
+                lock.unlock()
+            }
+        }
+    }
+
+    /// Разрешает сторожу ровно один цикл проверки.
+    func releaseOneCheck() {
+        lock.lock()
+        let continuation = waiter
+        waiter = nil
+        if continuation == nil { credits += 1 }
+        lock.unlock()
+        continuation?.resume()
+    }
 }
 
 private final class ThreadSafeFlag: @unchecked Sendable {

@@ -68,11 +68,18 @@ rm -rf /Applications/Chronica.app
 
 ## Install
 
-1. Download `Chronica-<version>.dmg` from [Releases](https://github.com/Vadim170/chronica/releases) and drag the app to `/Applications`. The DMG is signed with a Developer ID certificate and notarized by Apple, so Gatekeeper opens it without extra steps.
+1. Download `Chronica-<version>.dmg` from [Releases](https://github.com/Vadim170/chronica/releases) and drag the app to `/Applications`. **0.1.0 is signed ad-hoc only and is not notarized** — read the note below before you launch it.
 2. Launch it. Chronica appears in the menu bar (there is no Dock icon).
 3. On first run the popover shows exactly one thing to do: download the default model, *Parakeet TDT 0.6b v3 (int8)*, with its size and a progress bar. The Silero VAD file comes along with it automatically. The full list lives in the **Models** section.
-4. Press the record button. macOS will ask for **Microphone** access, and for **Screen & System Audio Recording** for the system-audio track — both prompts only appear in the signed app. If you decline the microphone, the popover offers a shortcut to the right settings pane instead of failing silently.
+4. Press the record button. macOS will ask for **Microphone** access, and for **Screen & System Audio Recording** for the system-audio track. If you decline the microphone, the popover offers a shortcut to the right settings pane instead of failing silently.
 5. That is it. The popover shows the live feed; the **Journal** section shows history.
+
+> **About the 0.1.0 signature.** This first release is signed ad-hoc, not with a Developer ID certificate, and is not notarized by Apple — signed, notarized releases will follow once one is in place. Gatekeeper blocks the first launch as a result: depending on your macOS version you'll see *"Chronica.app is damaged and can't be opened"* or *"Apple cannot check it for malicious software"*, and right-click → Open no longer works around this on macOS 15+. Two one-time fixes, once the app is in `/Applications`:
+>
+> - **Terminal:** `xattr -dr com.apple.quarantine /Applications/Chronica.app`, then double-click the app as usual.
+> - **Without a terminal:** try to open it once (it will fail), then go to **System Settings → Privacy & Security** and click **Open Anyway** next to the Chronica entry.
+>
+> A `.sha256` checksum sits next to the DMG on the Releases page if you want to verify the download, and you can always build Chronica yourself from source — see [`docs/BUILD.md`](docs/BUILD.md).
 
 A Homebrew cask is planned but does not exist yet. There is no in-app updater — new versions come from Releases.
 
@@ -168,7 +175,7 @@ The engine is a reusable Rust crate; the platform shell only captures audio, hos
       → Ollama vision model on localhost → text only → screen.sqlite
 ```
 
-The core never touches the microphone itself: the shell pushes PCM frames in through `push_audio_frame`, and the core resamples and processes them. The same core drives the Android client through UniFFI Kotlin bindings.
+The core never touches the microphone itself: the shell pushes PCM frames in through `push_audio_frame`, and the core resamples and processes them. The same core also drives an Android client through UniFFI Kotlin bindings — that client is experimental, not verified on a device, and has no releases.
 
 ## Build from source
 
@@ -198,11 +205,13 @@ The build needs network access: `sherpa-rs` downloads prebuilt sherpa-onnx / ONN
 ```
 core/      Rust crate `transcriber-core` — the engine, plus the `chronica` binary
 apple/     macOS app (SwiftUI + AppKit); Sources/, Tests/, Resources/, Scripts/
-android/   Experimental Android client on the same core — no public release
+android/   Android client on the same core — experimental, work in progress: builds from source, not verified on a device, no releases
 docs/      API.md · DATA.md · PRIVACY.md · BUILD.md · ROADMAP.md · STATUS.md · archive/
 scripts/   check-versions.sh — keeps the three version strings in sync
 .github/   CI and the signed-release workflow
 ```
+
+**Platform support:** macOS is the only platform Chronica ships and is supported on — see [Requirements](#requirements) and [Install](#install) above. Android is experimental and work in progress: it builds from source against the same core, but is not verified on a device and comes with no releases or guarantees. iOS is planned, not started.
 
 `docs/STATUS.md` is the engineering log — long, Russian, and honest about what has and has not been verified. `docs/archive/` holds superseded internal planning documents.
 

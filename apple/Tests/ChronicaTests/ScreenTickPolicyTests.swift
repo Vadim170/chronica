@@ -84,7 +84,9 @@ final class ScreenObserverSkipTests: XCTestCase {
         let counter = CallCounter()
         let observer = makeObserver(counter: counter, idleSeconds: 1, locked: false)
         observer.start()
-        let deadline = Date().addingTimeInterval(1)
+        // Ждём УСЛОВИЯ (кадр снят) с дедлайном, а не фиксированную паузу:
+        // дедлайн взят с запасом под медленный раннер CI.
+        let deadline = Date().addingTimeInterval(3)
         while Date() < deadline, counter.value == 0 {
             try await Task.sleep(nanoseconds: 10_000_000)
         }

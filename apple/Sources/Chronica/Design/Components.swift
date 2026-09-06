@@ -236,6 +236,24 @@ enum Fmt {
     /// Граница диапазона запроса в локальной зоне (для voiceActivity/intervals).
     static func queryBound(_ date: Date) -> String { isoLocal.string(from: date) }
 
+    /// Та же граница, но в ЯВНО заданной зоне.
+    ///
+    /// Продукт всегда работает в зоне пользователя, поэтому боевой код зовёт
+    /// `queryBound(_:)`. Явная зона нужна двум вызывающим:
+    /// `JournalPeriod.isoBounds` (форматирует в зоне своего календаря, чтобы
+    /// строка и `Date`-граница описывали одни и те же локальные сутки) и
+    /// тестам — инвариант «граница = локальная полночь» обязан проверяться
+    /// независимо от зоны машины, на которой идёт прогон (CI живёт в UTC).
+    static func queryBound(_ date: Date, timeZone: TimeZone) -> String {
+        // Обычный случай (зона пользователя) идёт через долгоживущий
+        // форматтер: боевой путь не платит за создание нового.
+        if timeZone == isoLocal.timeZone { return isoLocal.string(from: date) }
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime]
+        f.timeZone = timeZone
+        return f.string(from: date)
+    }
+
     static func date(_ s: String) -> Date? {
         iso.date(from: s) ?? isoPlain.date(from: s)
     }
@@ -523,10 +541,16 @@ enum JournalPeriod {
     }
 
     /// Границы как строки для `engine.intervals*/voiceActivity*`.
+    ///
+    /// Форматируем в зоне ТОГО ЖЕ календаря, которым посчитаны сутки: строка и
+    /// `Date`-граница обязаны описывать одну и ту же локальную полночь. Для
+    /// боевого `Calendar.current` это ровно прежнее поведение
+    /// (`Fmt.queryBound` в зоне пользователя).
     static func isoBounds(from: Date, to: Date,
                           calendar: Calendar = Calendar.current) -> (start: String, end: String) {
         let b = bounds(from: from, to: to, calendar: calendar)
-        return (Fmt.queryBound(b.start), Fmt.queryBound(b.end))
+        let zone = calendar.timeZone
+        return (Fmt.queryBound(b.start, timeZone: zone), Fmt.queryBound(b.end, timeZone: zone))
     }
 
     /// Гранулярность графика активности: до 2 суток включительно — по часам,

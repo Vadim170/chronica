@@ -31,9 +31,9 @@ final class ScreenObserverLifecycleTests: XCTestCase {
 
         // Старый describe игнорирует cancellation и всё ещё ждёт. Новое
         // поколение всё равно должно войти в свой тик и сохранить fresh.
-        try await waitUntil(timeout: 1) { describer.snapshot().calls >= 2 }
+        try await waitUntil(timeout: 3) { describer.snapshot().calls >= 2 }
         XCTAssertEqual(describer.snapshot().maxActive, 2)
-        try await waitUntil(timeout: 1) {
+        try await waitUntil(timeout: 3) {
             observer.activities(from: .distantPast, to: .distantFuture).count == 1
         }
         var saved = observer.activities(from: .distantPast, to: .distantFuture)
@@ -42,7 +42,7 @@ final class ScreenObserverLifecycleTests: XCTestCase {
         // Разрешаем старый await: его result остаётся stale и не может
         // перезаписать observation нового поколения.
         await describer.release()
-        try await waitUntil(timeout: 1) { describer.snapshot().calls >= 2 }
+        try await waitUntil(timeout: 3) { describer.snapshot().calls >= 2 }
         saved = observer.activities(from: .distantPast, to: .distantFuture)
         XCTAssertEqual(saved.count, 1)
         XCTAssertEqual(saved.first?.summary, "fresh")
@@ -55,7 +55,7 @@ final class ScreenObserverLifecycleTests: XCTestCase {
 
         observer.start()
         await describer.release()
-        try await waitUntil(timeout: 1) {
+        try await waitUntil(timeout: 3) {
             if case .backendUnavailable = observer.status { return true }
             return false
         }
@@ -117,8 +117,11 @@ final class ScreenObserverLifecycleTests: XCTestCase {
         )
     }
 
+    /// Ожидание УСЛОВИЯ с дедлайном. Дедлайн — верхняя граница терпения, а не
+    /// ожидаемое время: на медленном раннере CI тик наблюдателя приходит позже,
+    /// и запас по дедлайну не ослабляет проверку.
     private func waitUntil(
-        timeout: TimeInterval,
+        timeout: TimeInterval = 3,
         condition: @escaping @MainActor () -> Bool
     ) async throws {
         let deadline = Date().addingTimeInterval(timeout)

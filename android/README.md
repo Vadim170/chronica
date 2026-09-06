@@ -1,4 +1,11 @@
-# Transcriber — Android client
+# Chronica — Android client
+
+> **Status: experimental.** This client builds and links against the same Rust
+> core as the macOS app and passes its JVM unit tests, but it has never been
+> run on a physical Android device: the ASR pipeline and system-audio capture
+> are exercised only in CI (linkage and packaging), not as live transcription.
+> There is no public release, and the API and UI described below can change
+> without notice.
 
 A native Android (Kotlin + Jetpack Compose) client for the `transcriber-core`
 Rust engine. It reuses the **same** Rust core as the macOS/iOS app through
