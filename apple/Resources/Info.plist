@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>            <string>Chronica</string>
+    <!-- Локализация интерфейса: базовый язык English, доступен русский.
+         Язык выбирает система (Системные настройки → Основные → Язык и регион).
+         Значения ниже — АНГЛИЙСКИЕ дефолты; переводы строк Info.plist лежат в
+         Resources/{en,ru}.lproj/InfoPlist.strings и копируются в
+         Contents/Resources/{en,ru}.lproj скриптами сборки .app. -->
+    <key>CFBundleDevelopmentRegion</key> <string>en</string>
+    <key>CFBundleLocalizations</key>
+    <array>
+        <string>en</string>
+        <string>ru</string>
+    </array>
+    <key>CFBundleDisplayName</key>     <string>Chronica</string>
+    <!-- Продуктовое переименование Transcriber → Chronica (0.1.0). Смена
+         bundle id обнуляет выданные TCC-разрешения и домен UserDefaults,
+         поэтому при первом запуске приложение переносит каталог данных и
+         значения pref.* со старых имён (см. SupportFolderMigration и
+         PrefsMigration). Внутренние имена крейта/FFI (transcriber-core,
+         transcriber_core) намеренно оставлены прежними — см. README. -->
+    <key>CFBundleExecutable</key>      <string>Chronica</string>
+    <key>CFBundleIdentifier</key>      <string>io.github.vadim170.chronica</string>
+    <!-- CFBundleVersion — build number, ЦЕЛОЕ ЧИСЛО, монотонно растёт при
+         каждой публикуемой сборке (требование notarytool/Gatekeeper к
+         обновлениям). CFBundleShortVersionString — маркетинговая версия,
+         синхронизирована с core/Cargo.toml и android/app/build.gradle.kts
+         (проверяется scripts/check-versions.sh). -->
+    <key>CFBundleVersion</key>         <string>1</string>
+    <key>CFBundleShortVersionString</key> <string>0.1.0</string>
+    <key>CFBundlePackageType</key>     <string>APPL</string>
+    <key>CFBundleIconFile</key>        <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>  <string>14.0</string>
+    <key>LSApplicationCategoryType</key> <string>public.app-category.productivity</string>
+    <key>NSHumanReadableCopyright</key> <string>© 2026 Vadim Makarov. MIT License. Third-party components — see THIRD_PARTY_NOTICES.md.</string>
+    <!-- Menu-bar agent: no Dock icon, no main menu. -->
+    <key>LSUIElement</key>             <true/>
+    <!-- Долгоживущий фоновый агент: записывает аудио и держит модель в
+         памяти. Автозавершение/внезапное завершение процесса недопустимы —
+         они оборвали бы текущий интервал записи и незаписанные данные. -->
+    <key>NSSupportsAutomaticTermination</key> <false/>
+    <key>NSSupportsSuddenTermination</key>    <false/>
+    <!-- TCC usage strings (prompts only appear in a signed .app). -->
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Chronica listens to the microphone to transcribe speech locally. Audio is processed on this computer and is never sent anywhere.</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>Chronica records system audio (call participants, videos) for local transcription. The recording stays on this computer.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Chronica needs screen recording access for two things: (1) capturing system audio through ScreenCaptureKit; (2) the optional Screen Journal — if you turn it on, a screenshot is taken from time to time, a local model describes it, and only a text note about the work stays. The journal is off by default; screenshots and their descriptions never leave this computer.</string>
+</dict>
+</plist>

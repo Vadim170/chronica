@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Chronica.entitlements — права подписи для Chronica.app.
+
+  Профиль дистрибуции: Developer ID (вне App Store),
+  Hardened Runtime ON, App Sandbox OFF (надёжность Core Audio process taps
+  и ScreenCaptureKit; см. docs/archive/PRODUCT_PLAN.md).
+
+  Файл ОБЯЗАТЕЛЕН при подписи: apple/Scripts/sign-notarize.sh передаёт его
+  флагом entitlements по умолчанию, apple/Scripts/install-debug.sh делает то же
+  при ad-hoc подписи (ad-hoc codesign тоже принимает entitlements).
+
+  ВНИМАНИЕ ПРИ РЕДАКТИРОВАНИИ: не пишите в этих комментариях две чёрточки
+  подряд. По XML это запрещено внутри комментария, и парсер AMFI, которым
+  пользуется codesign, отвергнет весь файл («Failed to parse entitlements»).
+  Коварство в том, что plutil такой файл считает валидным, так что ошибка
+  всплывёт только при подписи. Поэтому флаги codesign здесь названы словами.
+  Проверять файл нужно через: xmllint (noout) и plutil (lint) — оба.
+
+  ==========================================================================
+  ЧТО ВКЛЮЧЕНО
+  ==========================================================================
+
+  com.apple.security.device.audio-input — ОБЯЗАТЕЛЬНО.
+      Под Hardened Runtime доступ к устройствам записи звука закрыт по
+      умолчанию, даже без App Sandbox. Без этого entitlement микрофон
+      (AVAudioEngine) будет молча отдавать тишину или получать отказ, а
+      системный диалог TCC про микрофон может не появиться вовсе.
+      Покрывает и Core Audio process tap (захват системного звука).
+
+  ==========================================================================
+  ЧТО СОЗНАТЕЛЬНО НЕ ВКЛЮЧЕНО (и почему)
+  ==========================================================================
+
+  com.apple.security.cs.disable-library-validation — НЕ НУЖЕН.
+      Library Validation требует, чтобы все загружаемые dylib были подписаны
+      тем же Team ID, что и главный бинарник (или самой Apple). Все наши
+      динамические зависимости (libonnxruntime.dylib и libsherpa-onnx-*.dylib
+      в Contents/Frameworks) переподписываются нашим Developer ID в
+      sign-notarize.sh на шаге inside-out, значит Team ID совпадает и
+      валидация проходит. whisper.cpp и ggml слинкованы статически и вопроса
+      не создают. Плагинов, внешних бандлов и dlopen библиотек вне бандла нет.
+      Отключать валидацию библиотек значило бы ослаблять защиту без причины.
+      ЕСЛИ когда-нибудь появится dlopen библиотеки, скачанной пользователем
+      (например, отдельный execution provider для ONNX Runtime или CoreML
+      плагин вне бандла), этот entitlement придётся добавить, и только тогда.
+
+  com.apple.security.cs.allow-jit,
+  com.apple.security.cs.allow-unsigned-executable-memory,
+  com.apple.security.cs.allow-dyld-environment-variables — НЕ НУЖНЫ.
+      JIT и исполняемая память без подписи нам не требуются: ONNX Runtime
+      (CPU EP) исполняет заранее скомпилированный код, а шейдеры ggml-metal
+      компилируются вне процесса (MTLCompilerService), что работает под
+      Hardened Runtime без послаблений. Переменные окружения dyld не
+      используются: rpath зашит в бинарник.
+
+  com.apple.security.automation.apple-events — НЕ НУЖЕН: Apple Events не шлём.
+
+  com.apple.security.network.client и .server, com.apple.security.files.* —
+      НЕ НУЖНЫ: это entitlements App Sandbox, а Sandbox выключен. Скачивание
+      моделей с HuggingFace, локальный HTTP API и запросы к Ollama работают
+      без них.
+
+  Запись экрана (ScreenCaptureKit) и микрофон дополнительно гейтятся TCC.
+  Это НЕ entitlements, а строки NSScreenCaptureUsageDescription и
+  NSMicrophoneUsageDescription в Info.plist плюс согласие пользователя.
+-->
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+</dict>
+</plist>

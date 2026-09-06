@@ -1,0 +1,13 @@
+/* Локализация строк Info.plist — английский (базовый язык).
+   Значения обязаны совпадать с дефолтами в Resources/Info.plist:
+   TCC-диалоги читают локализованную строку, а Finder — CFBundleDisplayName. */
+
+"CFBundleDisplayName" = "Chronica";
+
+"NSHumanReadableCopyright" = "© 2026 Vadim Makarov. MIT License. Third-party components — see THIRD_PARTY_NOTICES.md.";
+
+"NSMicrophoneUsageDescription" = "Chronica listens to the microphone to transcribe speech locally. Audio is processed on this computer and is never sent anywhere.";
+
+"NSAudioCaptureUsageDescription" = "Chronica records system audio (call participants, videos) for local transcription. The recording stays on this computer.";
+
+"NSScreenCaptureUsageDescription" = "Chronica needs screen recording access for two things: (1) capturing system audio through ScreenCaptureKit; (2) the optional Screen Journal — if you turn it on, a screenshot is taken from time to time, a local model describes it, and only a text note about the work stays. The journal is off by default; screenshots and their descriptions never leave this computer.";

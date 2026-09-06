@@ -1,0 +1,128 @@
+name: Баг-репорт
+description: Что-то работает не так — расскажите, что именно
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за отчёт. Chronica работает полностью локально, поэтому
+        воспроизвести проблему без контекста вашей машины почти невозможно —
+        пожалуйста, заполните поля ниже.
+
+        **Приватность:** лог `core.log` не содержит текстов транскрипции и
+        снимков экрана, но может содержать пути к файлам и имена моделей.
+        Просмотрите фрагмент перед вставкой.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Что произошло
+      description: Что вы сделали, что ожидали увидеть и что увидели на самом деле.
+      placeholder: |
+        1. Нажал «Запись»
+        2. Ожидал: пошли интервалы в «Живом»
+        3. Получил: индикатор крутится, текста нет
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Версия Chronica
+      description: Меню-бар → Настройки (или имя файла DMG). Формат «0.1.0 (build 1)».
+      placeholder: "0.1.0 (build 1)"
+    validations:
+      required: true
+
+  - type: input
+    id: macos
+    attributes:
+      label: Версия macOS
+      description: "→ Об этом Mac. Например: 15.3.1"
+      placeholder: "15.3.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: chip
+    attributes:
+      label: Чип
+      description: "→ Об этом Mac. Intel не поддерживается — сборка только под Apple Silicon."
+      options:
+        - Apple M1 / M1 Pro / M1 Max / M1 Ultra
+        - Apple M2 / M2 Pro / M2 Max / M2 Ultra
+        - Apple M3 / M3 Pro / M3 Max
+        - Apple M4 / M4 Pro / M4 Max
+        - Другой Apple Silicon
+        - Intel
+    validations:
+      required: true
+
+  - type: dropdown
+    id: asr-model
+    attributes:
+      label: Модель ASR
+      description: Настройки → Модели — какая выбрана в момент проблемы.
+      options:
+        - Parakeet TDT 0.6b v3 int8 (по умолчанию)
+        - Whisper large-v3-turbo (любая квантизация)
+        - Whisper другая (уточните в описании)
+        - Не знаю / модель не загрузилась
+    validations:
+      required: true
+
+  - type: dropdown
+    id: screen-journal
+    attributes:
+      label: Журнал экрана включён?
+      description: >
+        Настройки → «Журнал дел» (периодический снимок экрана + локальная
+        vision-модель через Ollama). По умолчанию выключен.
+      options:
+        - "Нет (по умолчанию)"
+        - "Да, и проблема связана с ним"
+        - "Да, но проблема не про него"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: audio-source
+    attributes:
+      label: Какой источник звука задействован
+      options:
+        - Микрофон
+        - Системный звук
+        - Оба
+        - Не относится к звуку
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Фрагмент core.log
+      description: |
+        Лог лежит здесь:
+        `~/Library/Application Support/Chronica/store/logs/core.log`
+
+        Скопировать последние 200 строк в буфер обмена (одной командой,
+        `find` подстрахует, если путь у вас другой):
+        ```
+        tail -n 200 "$(find ~/Library/Application\ Support/Chronica -name core.log | head -1)" | pbcopy
+        ```
+        Вставьте фрагмент вокруг момента проблемы (обычно достаточно 50–200 строк).
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Что ещё может быть важно
+      description: >
+        Внешняя аудиокарта / BlackHole, наушники Bluetooth, несколько
+        мониторов, VPN, корпоративный MDM, свежая переустановка разрешений
+        в «Конфиденциальности и безопасности» — что угодно необычное.
+    validations:
+      required: false

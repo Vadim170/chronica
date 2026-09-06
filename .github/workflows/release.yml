@@ -1,0 +1,233 @@
+# =============================================================================
+# release.yml — подписанный и нотаризованный релиз Chronica (macOS, arm64)
+# =============================================================================
+#
+# Триггер: push тега вида v0.1.0 (или ручной запуск workflow_dispatch).
+# Результат: GitHub Release с Chronica-<version>.dmg и файлом .sha256.
+#
+# -----------------------------------------------------------------------------
+# ТРЕБУЕМЫЕ СЕКРЕТЫ РЕПОЗИТОРИЯ (Settings → Secrets and variables → Actions)
+# -----------------------------------------------------------------------------
+#   MACOS_CERT_P12_BASE64  Сертификат «Developer ID Application» вместе с
+#                          приватным ключом, экспортированный из Keychain
+#                          Access в .p12 и закодированный:
+#                              base64 -i DeveloperID.p12 | pbcopy
+#   MACOS_CERT_PASSWORD    Пароль, заданный при экспорте .p12.
+#   KEYCHAIN_PASSWORD      Любая строка — пароль временной связки ключей,
+#                          создаваемой на раннере (живёт только в этом job).
+#   APPLE_ID               Apple ID (email) учётной записи разработчика.
+#   APPLE_TEAM_ID          Team ID (10 символов), например ABCDE12345.
+#   APPLE_APP_PASSWORD     App-specific password для этого Apple ID
+#                          (appleid.apple.com → Sign-In and Security →
+#                          App-Specific Passwords). НЕ основной пароль.
+#
+# Альтернатива паролю — App Store Connect API key (--key/--key-id/--issuer);
+# тогда меняется только шаг «notarytool store-credentials».
+#
+# Проверить эту обвязку без реальных ключей нельзя. Поэтому шаг «Preflight»
+# падает с явным перечнем недостающих секретов, а sign-notarize.sh запускается
+# с REQUIRE_SIGNING=1 — молча «зелёного» релиза без подписи не будет.
+# =============================================================================
+name: Release (macOS)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+  NOTARY_PROFILE: chronica-notary
+
+jobs:
+  release:
+    name: build · sign · notarize · publish
+    # Приложение — Apple Silicon (arm64); macos-latest сейчас arm64,
+    # проверяем это явно, чтобы не выложить x86_64-сборку незаметно.
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Preflight — секреты и окружение
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          arch="$(uname -m)"
+          if [ "$arch" != "arm64" ]; then
+            echo "::error::раннер $arch, а релиз собирается под Apple Silicon (arm64)"
+            exit 1
+          fi
+          missing=""
+          for name in MACOS_CERT_P12_BASE64 MACOS_CERT_PASSWORD KEYCHAIN_PASSWORD \
+                      APPLE_ID APPLE_TEAM_ID APPLE_APP_PASSWORD; do
+            eval "value=\${$name:-}"
+            [ -n "$value" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::не заданы секреты репозитория:$missing"
+            echo "См. шапку .github/workflows/release.yml — там расписано, что это и где взять."
+            exit 1
+          fi
+          echo "OK: все секреты на месте, раннер arm64"
+
+      - name: Версия и тег совпадают
+        # Тег v0.1.0 обязан соответствовать CFBundleShortVersionString и
+        # core/Cargo.toml — иначе в релиз уедет файл с чужим именем.
+        run: |
+          set -euo pipefail
+          ./scripts/check-versions.sh
+          version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
+              apple/Resources/Info.plist)"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            tag="${GITHUB_REF_NAME#v}"
+            if [ "$tag" != "$version" ]; then
+              echo "::error::тег v$tag не совпадает с версией приложения $version"
+              exit 1
+            fi
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          key: release
+
+      - name: Иконка приложения
+        # Иконка коммитится в репозиторий; генерируем только если её нет
+        # (генератор детерминированный и без внешних зависимостей).
+        run: |
+          set -euo pipefail
+          if [ ! -f apple/Resources/AppIcon.icns ]; then
+            echo "AppIcon.icns отсутствует в репозитории — генерируем"
+            apple/Scripts/make-icon.sh
+          fi
+          file apple/Resources/AppIcon.icns
+
+      - name: Сборка .app (release)
+        # package-app.sh сам вызывает Scripts/build-core.sh release
+        # (ядро без mock-asr: store,api,download,sherpa,whispercpp,ffi),
+        # затем собирает бандл, кладёт dylib, иконку, LICENSE и
+        # THIRD_PARTY_NOTICES.md. Отдельно build-core.sh не запускаем, чтобы не
+        # собирать ядро дважды.
+        run: apple/Scripts/package-app.sh
+
+      - name: Импорт сертификата Developer ID
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/chronica-signing.keychain-db"
+          CERT="$RUNNER_TEMP/cert.p12"
+
+          printf '%s' "$MACOS_CERT_P12_BASE64" | base64 --decode > "$CERT"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          # Без таймаута автолока: нотаризация может идти дольше 5 минут.
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$CERT" -k "$KEYCHAIN" -P "$MACOS_CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
+          # Иначе codesign покажет модальный запрос доступа к ключу и job зависнет.
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          # Временная связка должна попасть в список поиска, иначе codesign её не увидит.
+          security list-keychains -d user -s "$KEYCHAIN" \
+            $(security list-keychains -d user | tr -d '"')
+          rm -f "$CERT"
+
+          identity="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | grep 'Developer ID Application' | head -1 | sed -n 's/.*"\(.*\)"/\1/p')"
+          if [ -z "$identity" ]; then
+            echo "::error::в .p12 нет сертификата «Developer ID Application»"
+            security find-identity -v -p codesigning "$KEYCHAIN" || true
+            exit 1
+          fi
+          echo "Найдена идентичность: $identity"
+          echo "DEV_ID_APP=$identity" >> "$GITHUB_ENV"
+          echo "SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Профиль notarytool
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          xcrun notarytool store-credentials "$NOTARY_PROFILE" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_PASSWORD" \
+            --keychain "$SIGNING_KEYCHAIN"
+
+      - name: Подпись .app (inside-out, entitlements, hardened runtime)
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          TEAM_ID="$APPLE_TEAM_ID" \
+          REQUIRE_SIGNING=1 \
+          NOTARIZE_TARGET=none \
+          apple/Scripts/sign-notarize.sh
+
+      - name: Сборка DMG
+        run: apple/Scripts/make-dmg.sh
+
+      - name: Нотаризация и stapler
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          TEAM_ID="$APPLE_TEAM_ID" \
+          REQUIRE_SIGNING=1 \
+          NOTARIZE_TARGET=dmg \
+          NOTARY_KEYCHAIN="$SIGNING_KEYCHAIN" \
+          DMG="apple/dist/Chronica-$VERSION.dmg" \
+          apple/Scripts/sign-notarize.sh --notarize-only
+
+      - name: Итоговые артефакты
+        run: |
+          set -euo pipefail
+          ls -lh "apple/dist/Chronica-$VERSION.dmg" "apple/dist/Chronica-$VERSION.dmg.sha256"
+          cat "apple/dist/Chronica-$VERSION.dmg.sha256"
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Chronica ${{ env.VERSION }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            apple/dist/Chronica-${{ env.VERSION }}.dmg
+            apple/dist/Chronica-${{ env.VERSION }}.dmg.sha256
+          body: |
+            **Chronica ${{ env.VERSION }}** — локальный сборщик контекста работы (macOS 14+, Apple Silicon).
+
+            Установка: откройте DMG и перетащите Chronica в «Программы».
+            При первом запуске выдайте доступ к микрофону и к записи экрана
+            (запись экрана нужна для захвата системного звука; «Журнал дел»
+            выключен по умолчанию).
+
+            Приложение подписано Developer ID и нотаризовано Apple.
+            Контрольная сумма — в приложенном файле `.sha256`.
+
+            Сторонние компоненты и их лицензии: `THIRD_PARTY_NOTICES.md`.
+
+      - name: Очистка связки ключей
+        if: always()
+        run: |
+          security delete-keychain "$SIGNING_KEYCHAIN" 2>/dev/null || true

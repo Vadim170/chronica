@@ -1,0 +1,669 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Chronica Local API",
+    "version": "1.0.0",
+    "description": "Локальный on-device API сборщика контекста работы Chronica.\nСервер поднимается самим приложением и слушает только петлевой интерфейс.\nВерсия v1 стабильна и расширяется только аддитивно: новые поля и эндпоинты\nмогут появляться, существующие не переименовываются и не удаляются.\nПодробности и примеры curl — docs/API.md.",
+    "license": { "name": "MIT" }
+  },
+  "servers": [
+    { "url": "http://127.0.0.1:8765", "description": "локальный сервер приложения (порт настраивается)" }
+  ],
+  "tags": [
+    { "name": "v1", "description": "Стабильный API версии 1" },
+    { "name": "legacy", "description": "Исторические пути без версии; сохраняются навсегда" }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Живость сервера и базы",
+        "description": "Не требует токена (как и /api/v1/openapi.json). Не отдаёт приватных данных.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "version": { "type": "string", "example": "0.1.0" },
+                            "db_ok": { "type": "boolean" },
+                            "schema_version": { "type": "integer", "example": 2 },
+                            "fts5": { "type": "boolean" },
+                            "api_version": { "type": "string", "example": "1" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/state": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Снимок состояния движка",
+        "parameters": [
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["last_text"] },
+            "description": "Список через запятую. `last_text` возвращает последний распознанный текст по источникам (по умолчанию поле пустое)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/MetricsSnapshot" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/intervals": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Интервалы транскрипции за период",
+        "description": "Возвращает интервалы, ПЕРЕСЕКАЮЩИЕ [from, to]. Пагинация — keyset по курсору.",
+        "parameters": [
+          { "$ref": "#/components/parameters/From" },
+          { "$ref": "#/components/parameters/To" },
+          { "$ref": "#/components/parameters/Channel" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/IntervalPage" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/intervals/{id}": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Один интервал по идентификатору",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    { "type": "object", "properties": { "data": { "$ref": "#/components/schemas/IntervalRecord" } } }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/transcript": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Сшитый текст за период",
+        "parameters": [
+          { "$ref": "#/components/parameters/From" },
+          { "$ref": "#/components/parameters/To" },
+          { "$ref": "#/components/parameters/Channel" },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["text", "json", "md"], "default": "text" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Текст (`text/plain`), Markdown (`text/markdown`) или JSON-конверт.",
+            "content": {
+              "text/plain": { "schema": { "type": "string" } },
+              "text/markdown": { "schema": { "type": "string" } },
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "from": { "type": "string", "nullable": true },
+                            "to": { "type": "string", "nullable": true },
+                            "channel": { "type": "string", "nullable": true },
+                            "count": { "type": "integer" },
+                            "text": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Полнотекстовый поиск по транскрипции",
+        "description": "Движок — FTS5 (`engine: \"fts5\"`), при сборке SQLite без FTS5 — подстрока (`engine: \"like\"`). Курсор — смещение вида `off:N`. Элемент `items` — `IntervalRecord` плюс аддитивные `channel_id` и `snippet` (см. `SearchHit`): один элемент на интервал, новые сверху.",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string" }, "description": "Поисковый запрос; слова соединяются логическим И." },
+          { "$ref": "#/components/parameters/From" },
+          { "$ref": "#/components/parameters/To" },
+          { "$ref": "#/components/parameters/Limit" },
+          { "$ref": "#/components/parameters/Cursor" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "allOf": [
+                            { "$ref": "#/components/schemas/IntervalPage" },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "engine": { "type": "string", "enum": ["fts5", "like"] },
+                                "items": { "type": "array", "items": { "$ref": "#/components/schemas/SearchHit" } }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/activity": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Активность речи по бакетам",
+        "parameters": [
+          {
+            "name": "bucket",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["hour", "day"], "default": "hour" }
+          },
+          { "$ref": "#/components/parameters/FromRequired" },
+          { "$ref": "#/components/parameters/ToRequired" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "properties": {
+                            "bucket": { "type": "string", "enum": ["hour", "day"] },
+                            "buckets": { "type": "array", "items": { "$ref": "#/components/schemas/ActivityBucket" } }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/sessions": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Сессии записи (когда запись включали и выключали)",
+        "description": "Факты «здесь запись включили / выключили», по которым единая лента журнала рисует разделители (а не эвристика «пауза больше N секунд»). БЕЗ `from`/`to` отдаются последние `limit` сессий, новые сверху. С границами — сессии, у которых в период попадает НАЧАЛО ИЛИ КОНЕЦ, по возрастанию времени, не больше `limit`. Пустые `ended_at` и `stop_reason` означают, что сессию никто не закрыл: процесс убили, то есть «здесь приложение закрылось».",
+        "parameters": [
+          { "$ref": "#/components/parameters/From" },
+          { "$ref": "#/components/parameters/To" },
+          { "$ref": "#/components/parameters/Limit" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": ["count", "items"],
+                          "properties": {
+                            "count": { "type": "integer" },
+                            "items": { "type": "array", "items": { "$ref": "#/components/schemas/Session" } }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/export": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Документ журнала за период (транскрипционная часть)",
+        "description": "Форма документа совпадает с экспортом журнала в macOS-приложении (JournalExport). Ядро не знает про экранный журнал, поэтому `activities` всегда пустой. Ответ — САМ документ, без конверта `{ok,data}` (чтобы его можно было сохранить в файл как есть); ошибки при этом остаются в конверте.",
+        "parameters": [
+          { "$ref": "#/components/parameters/FromRequired" },
+          { "$ref": "#/components/parameters/ToRequired" },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "enum": ["json", "md"], "default": "json" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Документ журнала",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/JournalDocument" } },
+              "text/markdown": { "schema": { "type": "string" } }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" }
+        }
+      }
+    },
+    "/api/v1/openapi.json": {
+      "get": {
+        "tags": ["v1"],
+        "summary": "Эта спецификация",
+        "description": "Не требует токена: спецификация статична и приватных данных не содержит.",
+        "security": [],
+        "responses": {
+          "200": { "description": "OpenAPI 3.0 документ", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/api/intervals": {
+      "get": {
+        "tags": ["legacy"],
+        "summary": "Интервалы за период (исторический путь)",
+        "description": "Сохраняется навсегда ради совместимости. Форма ответа: `{ ok, count, intervals }`.",
+        "parameters": [
+          { "$ref": "#/components/parameters/FromRequired" },
+          { "$ref": "#/components/parameters/ToRequired" }
+        ],
+        "responses": { "200": { "description": "OK" }, "400": { "$ref": "#/components/responses/BadRequest" } }
+      }
+    },
+    "/api/transcriptions": {
+      "get": {
+        "tags": ["legacy"],
+        "summary": "Алиас /api/intervals",
+        "parameters": [
+          { "$ref": "#/components/parameters/FromRequired" },
+          { "$ref": "#/components/parameters/ToRequired" }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/voice-activity": {
+      "get": {
+        "tags": ["legacy"],
+        "summary": "Активность речи (исторический путь)",
+        "parameters": [
+          { "name": "type", "in": "query", "schema": { "type": "string", "enum": ["hourly", "daily"], "default": "hourly" } },
+          { "$ref": "#/components/parameters/FromRequired" },
+          { "$ref": "#/components/parameters/ToRequired" }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/state": {
+      "get": {
+        "tags": ["legacy"],
+        "summary": "Состояние движка (исторический путь)",
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Токен из настроек приложения. Если токен пуст, авторизация не требуется (допустимо только для петлевого адреса)."
+      }
+    },
+    "parameters": {
+      "From": {
+        "name": "from",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string" },
+        "description": "Начало периода: ISO-8601 с таймзоной, `YYYY-MM-DD` (локальные сутки) или epoch-миллисекунды. По умолчанию — начало истории."
+      },
+      "To": {
+        "name": "to",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string" },
+        "description": "Конец периода в том же формате. По умолчанию — конец истории."
+      },
+      "FromRequired": {
+        "name": "from",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string" },
+        "description": "Начало периода: ISO-8601, `YYYY-MM-DD` или epoch-миллисекунды."
+      },
+      "ToRequired": {
+        "name": "to",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "string" },
+        "description": "Конец периода: ISO-8601, `YYYY-MM-DD` или epoch-миллисекунды."
+      },
+      "Channel": {
+        "name": "channel",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string", "example": "mic" },
+        "description": "Идентификатор канала (`mic`, `remote`, ...). Оставляет только интервалы с этим каналом и только его тексты."
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "integer", "minimum": 1, "maximum": 1000, "default": 100 }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": { "type": "string" },
+        "description": "Непрозрачный курсор из поля `next_cursor` предыдущего ответа."
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Некорректные параметры запроса",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "Unauthorized": {
+        "description": "Нет или неверный Bearer-токен",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      },
+      "NotFound": {
+        "description": "Объект не найден",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } }
+      }
+    },
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "required": ["ok", "data"],
+        "properties": { "ok": { "type": "boolean", "enum": [true] }, "data": {} }
+      },
+      "ErrorEnvelope": {
+        "type": "object",
+        "required": ["ok", "error"],
+        "properties": {
+          "ok": { "type": "boolean", "enum": [false] },
+          "error": {
+            "type": "object",
+            "required": ["code", "message"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": ["bad_request", "unauthorized", "not_found", "store_error", "internal"]
+              },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      },
+      "ChannelText": {
+        "type": "object",
+        "required": ["channel_id", "text", "words", "language"],
+        "properties": {
+          "channel_id": { "type": "string", "example": "mic" },
+          "text": { "type": "string" },
+          "words": { "type": "integer" },
+          "language": { "type": "string", "example": "ru" }
+        }
+      },
+      "IntervalRecord": {
+        "type": "object",
+        "required": ["id", "start_at", "end_at", "duration_s", "channels"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "start_at": { "type": "string", "example": "2026-09-03T10:00:00+03:00" },
+          "end_at": { "type": "string" },
+          "duration_s": { "type": "number", "format": "double" },
+          "channels": { "type": "array", "items": { "$ref": "#/components/schemas/ChannelText" } }
+        }
+      },
+      "IntervalPage": {
+        "type": "object",
+        "required": ["count", "items"],
+        "properties": {
+          "count": { "type": "integer" },
+          "items": { "type": "array", "items": { "$ref": "#/components/schemas/IntervalRecord" } },
+          "next_cursor": { "type": "string", "nullable": true }
+        }
+      },
+      "SearchHit": {
+        "description": "Попадание поиска: все поля `IntervalRecord` (включая `channels[].text` целиком) плюс аддитивные `channel_id` и `snippet`.",
+        "allOf": [
+          { "$ref": "#/components/schemas/IntervalRecord" },
+          {
+            "type": "object",
+            "required": ["channel_id", "snippet"],
+            "properties": {
+              "channel_id": { "type": "string", "description": "Канал, в тексте которого нашлись слова запроса (если ни в одном — первый непустой).", "example": "mic" },
+              "snippet": { "type": "string", "description": "Фрагмент текста этого канала ≈200 символов вокруг совпадения: совпадения выделены «…», обрыв текста помечен …, границы не режут слова.", "example": "…обсудили «релиз» Chronica и подписи…" }
+            }
+          }
+        ]
+      },
+      "ChannelCount": {
+        "type": "object",
+        "required": ["channel_id", "count"],
+        "properties": {
+          "channel_id": { "type": "string" },
+          "count": { "type": "integer" }
+        }
+      },
+      "ActivityBucket": {
+        "type": "object",
+        "required": ["ts", "counts"],
+        "properties": {
+          "ts": { "type": "string", "description": "RFC3339 для bucket=hour, `YYYY-MM-DD` для bucket=day." },
+          "counts": { "type": "array", "items": { "$ref": "#/components/schemas/ChannelCount" } }
+        }
+      },
+      "Session": {
+        "type": "object",
+        "description": "Сессия записи: факт «здесь включили» и «здесь выключили». Пустые `ended_at` и `stop_reason` = сессию никто не закрыл (процесс убили) — «здесь приложение закрылось».",
+        "required": ["id", "started_at", "ended_at", "stop_reason"],
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "started_at": { "type": "string", "description": "ISO-8601 с локальным смещением.", "example": "2026-09-03T10:00:00+03:00" },
+          "ended_at": { "type": "string", "description": "ISO-8601 с локальным смещением; ПУСТАЯ СТРОКА — сессия не закрыта.", "example": "2026-09-03T10:42:30+03:00" },
+          "stop_reason": { "type": "string", "enum": ["user", "error", ""], "description": "`user` — остановил пользователь, `error` — авария (паника DSP, потеря ASR-воркера, watchdog), пустая строка — сессия не закрыта." }
+        }
+      },
+      "SourceMetrics": {
+        "type": "object",
+        "properties": {
+          "channel_id": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "status": { "type": "string" },
+          "queue_size": { "type": "integer" },
+          "dropped_chunks": { "type": "integer" },
+          "busy": { "type": "boolean" },
+          "last_rtf": { "type": "number" },
+          "lag_estimate_s": { "type": "number" },
+          "words": { "type": "integer" },
+          "last_text": { "type": "string", "description": "Пусто, если не запрошено `include=last_text`." },
+          "last_language": { "type": "string" },
+          "speech_seconds": { "type": "number" }
+        }
+      },
+      "MetricsSnapshot": {
+        "type": "object",
+        "properties": {
+          "state_running": { "type": "boolean" },
+          "state_loading": { "type": "boolean" },
+          "state_stopping": { "type": "boolean" },
+          "model_loaded": { "type": "boolean" },
+          "model_name": { "type": "string" },
+          "started_at": { "type": "string" },
+          "last_write_at": { "type": "string" },
+          "total_words": { "type": "integer" },
+          "total_intervals": { "type": "integer" },
+          "bg_queue_depth": { "type": "integer" },
+          "bg_queue_capacity": { "type": "integer" },
+          "current_interval_elapsed_s": { "type": "number" },
+          "current_interval_start_at": { "type": "string" },
+          "channels_silent": { "type": "boolean" },
+          "sources": { "type": "array", "items": { "$ref": "#/components/schemas/SourceMetrics" } },
+          "cpu_percent": { "type": "number" },
+          "cpu_p50": { "type": "number" },
+          "cpu_p90": { "type": "number" },
+          "memory_rss_bytes": { "type": "integer" },
+          "memory_rss_peak_bytes": { "type": "integer" },
+          "last_error": { "type": "string" }
+        }
+      },
+      "JournalDocument": {
+        "type": "object",
+        "required": ["product", "exportedAt", "from", "to", "activities", "transcription"],
+        "description": "Совместим с экспортом журнала в приложении (camelCase-ключи).",
+        "properties": {
+          "product": { "type": "string", "example": "Chronica" },
+          "exportedAt": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "activities": {
+            "type": "array",
+            "description": "Дела с экрана; ядро их не хранит, поэтому здесь всегда пусто.",
+            "items": { "type": "object" }
+          },
+          "transcription": {
+            "type": "object",
+            "required": ["count", "intervals"],
+            "properties": {
+              "count": { "type": "integer" },
+              "intervals": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "startAt", "endAt", "durationS", "channels"],
+                  "properties": {
+                    "id": { "type": "integer", "format": "int64" },
+                    "startAt": { "type": "string" },
+                    "endAt": { "type": "string" },
+                    "durationS": { "type": "number" },
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["channelId", "text", "words", "language"],
+                        "properties": {
+                          "channelId": { "type": "string" },
+                          "text": { "type": "string" },
+                          "words": { "type": "integer" },
+                          "language": { "type": "string" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

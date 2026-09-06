@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>about.author</key>
+	<string>Developed by Vadim Makarov</string>
+	<key>about.github</key>
+	<string>GitHub: %@</string>
+	<key>about.license</key>
+	<string>MIT License. © 2026 Vadim Makarov.</string>
+	<key>about.local</key>
+	<string>Runs entirely on this computer: audio, screenshots and transcripts never leave it.</string>
+	<key>about.modelAttribution</key>
+	<string>Parakeet TDT model — © NVIDIA, CC-BY-4.0.</string>
+	<key>about.notices</key>
+	<string>Third-Party Notices</string>
+	<key>about.versionLine</key>
+	<string>Version %1$@ (build %2$@)</string>
+	<key>activities.noSpeech</key>
+	<string>No speech recorded during this interval.</string>
+	<key>channel.mic</key>
+	<string>Microphone</string>
+	<key>channel.system</key>
+	<string>System</string>
+	<key>chart.time</key>
+	<string>Time</string>
+	<key>chart.track</key>
+	<string>Track</string>
+	<key>chart.words</key>
+	<string>Words</string>
+	<key>diag.cpu</key>
+	<string>CPU</string>
+	<key>diag.cpu.note</key>
+	<string>Can exceed 100% with several threads — just like in Activity Monitor.</string>
+	<key>diag.droppedAudio.note</key>
+	<string>Some audio did not make it into processing. Normally this line is absent.</string>
+	<key>diag.droppedIntervals.note</key>
+	<string>These intervals were not recognized and never reached the history. Normally this line is absent.</string>
+	<key>diag.empty</key>
+	<string>Metrics appear while recording.</string>
+	<key>diag.lag</key>
+	<string>Lag</string>
+	<key>diag.lag.note</key>
+	<string>How far recognition trails real time.</string>
+	<key>diag.load</key>
+	<string>Load</string>
+	<key>diag.memory</key>
+	<string>Memory</string>
+	<key>diag.memory.note</key>
+	<string>Resident memory of the process. Category breakdown below.</string>
+	<key>diag.memoryBreakdown</key>
+	<string>Where Memory Goes</string>
+	<key>diag.queue</key>
+	<string>Processing Queue</string>
+	<key>diag.queue.note</key>
+	<string>Intervals awaiting recognition. 0 — we are keeping up.</string>
+	<key>diag.rtf</key>
+	<string>Real-time factor (RTF)</string>
+	<key>diag.rtf.note</key>
+	<string>Below 1 — we process faster than people speak.</string>
+	<key>diag.speed</key>
+	<string>Processing Speed</string>
+	<key>error.audio.engineStart</key>
+	<string>Could not start the audio engine: %@</string>
+	<key>error.audio.inputLost</key>
+	<string>The microphone stopped delivering audio: %@</string>
+	<key>error.audio.micDenied</key>
+	<string>No microphone access. Open System Settings → Privacy &amp; Security → Microphone and allow access for Chronica.</string>
+	<key>error.audio.micNotDetermined</key>
+	<string>Microphone access has not been granted yet. Confirm the system prompt and try again.</string>
+	<key>error.audio.osStatus</key>
+	<string>Core Audio error at the “%1$@” stage (code %2$@).</string>
+	<key>error.audio.reason.micUnavailable</key>
+	<string>the microphone is unavailable</string>
+	<key>error.audio.reason.noDisplay</key>
+	<string>no display available</string>
+	<key>error.audio.reason.noMechanism</key>
+	<string>no capture mechanism available</string>
+	<key>error.audio.reason.noSink</key>
+	<string>no audio sink</string>
+	<key>error.audio.reason.sckNoStream</key>
+	<string>ScreenCaptureKit returned no stream</string>
+	<key>error.audio.reason.sckTimeout</key>
+	<string>ScreenCaptureKit start timed out (%lld s)</string>
+	<key>error.audio.reason.sourceDeinit</key>
+	<string>the capture source was deinitialized</string>
+	<key>error.audio.systemUnavailable</key>
+	<string>Could not capture the system audio: %@</string>
+	<key>error.audioPrefix</key>
+	<string>Audio: %@</string>
+	<key>error.core.api</key>
+	<string>The local API did not start. Check the address and port in Settings.</string>
+	<key>error.core.audio</key>
+	<string>Audio problem. Check the input device and the permissions.</string>
+	<key>error.core.backend</key>
+	<string>The recognition engine could not process the audio. Restart the recording.</string>
+	<key>error.core.config</key>
+	<string>Invalid recording settings. Check the parameters and try again.</string>
+	<key>error.core.internal</key>
+	<string>Internal core error. Restart the recording.</string>
+	<key>error.core.modelDownload</key>
+	<string>Could not download the model. Check your internet connection and free disk space.</string>
+	<key>error.core.modelLoad</key>
+	<string>Could not load the model. Download it again and check the free disk space.</string>
+	<key>error.core.store</key>
+	<string>Could not save the data. Check the free disk space and the access rights.</string>
+	<key>error.detail</key>
+	<string>%1$@ (%2$@)</string>
+	<key>error.modelDownload</key>
+	<string>Downloading the %1$@ model: %2$@</string>
+	<key>error.pipelineStalled</key>
+	<string>Transcription stopped critically: %@. Recording has stopped. Restart Chronica.</string>
+	<key>error.queueDrop</key>
+	<string>Warning: the recognizer could not keep up with an interval (lost: %lld). Recording continues.</string>
+	<key>error.relaunchFailed</key>
+	<string>Could not start a new Chronica process. The current recording has already stopped; try restarting again.</string>
+	<key>error.unexpected</key>
+	<string>Unexpected error.</string>
+	<key>error.wakeCapture</key>
+	<string>Capture after wake: %@</string>
+	<key>export.md.activities.empty</key>
+	<string>_No activities recorded for this period._</string>
+	<key>export.md.exportedAt</key>
+	<string>Exported: %@</string>
+	<key>export.md.period</key>
+	<string>Period: %1$@ — %2$@</string>
+	<key>export.md.title</key>
+	<string>%@ Journal</string>
+	<key>export.md.transcription.empty</key>
+	<string>_No speech recorded for this period._</string>
+	<key>fmt.today</key>
+	<string>Today</string>
+	<key>fmt.yesterday</key>
+	<string>Yesterday</string>
+	<key>health.degraded</key>
+	<string>One audio source is unavailable — recording the others</string>
+	<key>health.dropped</key>
+	<string>Some speech was not recognized (overload)</string>
+	<key>health.sleep</key>
+	<string>Paused: the computer was asleep, restoring capture</string>
+	<key>health.stalled</key>
+	<string>Recording stopped — restart Chronica</string>
+	<key>hint.sourceChangeRestart</key>
+	<string>The changed source set applies the next time recording starts.</string>
+	<key>history.copy</key>
+	<string>Copy</string>
+	<key>history.noResults.description</key>
+	<string>Refine the query or change the period.</string>
+	<key>history.noResults.title</key>
+	<string>Nothing Found</string>
+	<key>history.search.placeholder</key>
+	<string>Search text</string>
+	<key>history.searching</key>
+	<string>Searching by meaning…</string>
+	<key>journal.export</key>
+	<string>Export…</string>
+	<key>journal.export.a11y</key>
+	<string>Export the period</string>
+	<key>journal.export.failed</key>
+	<string>Could not save the export: %@</string>
+	<key>journal.export.help</key>
+	<string>Export activities, windows and transcription for the selected period</string>
+	<key>journal.feed.empty.description</key>
+	<string>Speech and screen activities for the selected period will show up here.</string>
+	<key>journal.feed.empty.title</key>
+	<string>Nothing Recorded Yet</string>
+	<key>journal.period.from.a11y</key>
+	<string>Period start</string>
+	<key>journal.period.to.a11y</key>
+	<string>Period end</string>
+	<key>journal.scale.daily</key>
+	<string>daily</string>
+	<key>journal.scale.hourly</key>
+	<string>hourly</string>
+	<key>journal.session.appClosed</key>
+	<string>App closed</string>
+	<key>journal.session.failed</key>
+	<string>Recording failed</string>
+	<key>journal.session.started</key>
+	<string>Recording started %@</string>
+	<key>journal.session.stopped</key>
+	<string>Recording stopped %@</string>
+	<key>journal.today</key>
+	<string>Today</string>
+	<key>journal.today.help</key>
+	<string>Show and export today only</string>
+	<key>journal.voiceActivity</key>
+	<string>Voice Activity</string>
+	<key>journal.voiceActivity.a11y</key>
+	<string>Voice activity chart for the period</string>
+	<key>journal.voiceActivity.empty</key>
+	<string>No speech recorded for this period</string>
+	<key>live.listening</key>
+	<string>listening…</string>
+	<key>live.processing</key>
+	<string>processing…</string>
+	<key>live.silence</key>
+	<string>silence…</string>
+	<key>memory.cat.app</key>
+	<string>App and system</string>
+	<key>memory.cat.app.detail</key>
+	<string>interface, audio buffers and service data</string>
+	<key>memory.cat.model</key>
+	<string>Recognition model (%@)</string>
+	<key>memory.cat.model.detail</key>
+	<string>model files loaded into memory</string>
+	<key>memory.cat.runtime</key>
+	<string>Recognition working memory</string>
+	<key>memory.cat.runtime.detail</key>
+	<string>intermediate data while audio is processed; highest right after the model loads, then it shrinks</string>
+	<key>memory.cat.search</key>
+	<string>Semantic search</string>
+	<key>memory.cat.search.detail</key>
+	<string>loads when you search in the Journal and is freed afterwards</string>
+	<key>memory.category.line</key>
+	<string>%1$@%2$@ · %3$lld%% — %4$@</string>
+	<key>memory.notLoaded</key>
+	<string>not loaded — %1$@; ≈%2$@ when active</string>
+	<key>memory.total</key>
+	<string>Memory usage (RSS): %@</string>
+	<key>menu.about</key>
+	<string>About Chronica</string>
+	<key>menu.openWindow</key>
+	<string>Open Window</string>
+	<key>menu.quit</key>
+	<string>Quit</string>
+	<key>menu.settings</key>
+	<string>Settings…</string>
+	<key>menu.stopRecording</key>
+	<string>Stop Recording</string>
+	<key>metric.droppedAudio</key>
+	<string>audio lost: %lld s</string>
+	<key>metric.median.short</key>
+	<string>med</string>
+	<key>metric.peak.short</key>
+	<string>peak</string>
+	<key>metric.stopped</key>
+	<string>Stream stopped</string>
+	<key>metric.storeLine</key>
+	<string>Data: %1$@ · %2$@</string>
+	<key>metric.waiting</key>
+	<string>Metrics: waiting</string>
+	<key>migration.folderFailed</key>
+	<string>Could not move the data folder “%1$@” to “%2$@”. The app keeps working with the old folder — your data and models are intact.</string>
+	<key>models.active.a11y</key>
+	<string>Active model</string>
+	<key>models.apply</key>
+	<string>Apply</string>
+	<key>models.applying</key>
+	<string>Applying…</string>
+	<key>models.badge.active</key>
+	<string>Active</string>
+	<key>models.badge.selected</key>
+	<string>Selected</string>
+	<key>models.delete.a11y</key>
+	<string>Delete the %@ model</string>
+	<key>models.delete.help</key>
+	<string>Delete</string>
+	<key>models.download.a11y</key>
+	<string>Download the %@ model</string>
+	<key>models.download.help</key>
+	<string>Download</string>
+	<key>models.empty.description</key>
+	<string>It will load from the core.</string>
+	<key>models.empty.title</key>
+	<string>No Models Yet</string>
+	<key>models.name.whisper</key>
+	<string>Whisper %@</string>
+	<key>models.pending.hint</key>
+	<string>Changing the model restarts the recording.</string>
+	<key>models.pending.selected</key>
+	<string>Selected: %@</string>
+	<key>models.progress.a11y</key>
+	<string>Downloading, %lld percent</string>
+	<key>models.select.a11y</key>
+	<string>Select the %@ model</string>
+	<key>models.select.help</key>
+	<string>Select</string>
+	<key>models.select.pending</key>
+	<string>Selected — press Apply</string>
+	<key>models.size.parakeet</key>
+	<string>≈640 MB</string>
+	<key>models.size.unknown</key>
+	<string>size unknown</string>
+	<key>models.title</key>
+	<string>Models</string>
+	<key>popover.activity24h</key>
+	<string>Activity, Last 24 Hours</string>
+	<key>popover.currentInterval.a11y</key>
+	<string>Current interval time</string>
+	<key>popover.downloadModel</key>
+	<string>Download the %1$@ model (%2$@)</string>
+	<key>popover.downloading</key>
+	<string>Downloading %@</string>
+	<key>popover.lines</key>
+	<string>Journal</string>
+	<key>popover.lines.idle</key>
+	<string>Start recording</string>
+	<key>popover.lines.waiting</key>
+	<string>Entries appear once an interval is sliced</string>
+	<key>popover.micDenied</key>
+	<string>Chronica cannot listen to the microphone while access is denied.</string>
+	<key>popover.notEnoughData</key>
+	<string>Not enough data yet</string>
+	<key>popover.openMicSettings</key>
+	<string>Open Microphone Settings</string>
+	<key>popover.openSection.a11y</key>
+	<string>Open the “%@” section</string>
+	<key>popover.restartApp</key>
+	<string>Restart Chronica</string>
+	<key>popover.retry</key>
+	<string>Retry</string>
+	<key>popover.source.a11y</key>
+	<string>“%@” source</string>
+	<key>popover.sources</key>
+	<string>Sources</string>
+	<key>popover.start</key>
+	<string>Start Recording</string>
+	<key>popover.stop</key>
+	<string>Stop</string>
+	<key>retention.forever</key>
+	<string>Forever</string>
+	<key>screen.captureFailed</key>
+	<string>The screenshot failed: %@</string>
+	<key>screen.error.encodeFailed</key>
+	<string>could not encode the frame</string>
+	<key>screen.error.noDisplays</key>
+	<string>no displays available</string>
+	<key>screen.noPermission</key>
+	<string>No Screen Recording access. Grant it in System Settings → Privacy &amp; Security → Screen Recording, then RESTART Chronica (macOS does not apply this permission to an already running app).</string>
+	<key>screen.storeError</key>
+	<string>Screen journal storage: %@</string>
+	<key>screen.visionUnavailable</key>
+	<string>The vision model is unavailable: %@</string>
+	<key>section.journal</key>
+	<string>Journal</string>
+	<key>section.models</key>
+	<string>Models</string>
+	<key>section.settings</key>
+	<string>Settings</string>
+	<key>settings.advanced</key>
+	<string>Advanced</string>
+	<key>settings.advanced.diagnostics</key>
+	<string>Diagnostics…</string>
+	<key>settings.advanced.diagnostics.a11y</key>
+	<string>Open the Diagnostics window</string>
+	<key>settings.api.copied</key>
+	<string>Copied</string>
+	<key>settings.api.copy</key>
+	<string>Copy</string>
+	<key>settings.api.copy.a11y</key>
+	<string>Copy the access token</string>
+	<key>settings.api.docs</key>
+	<string>API documentation — docs/API.md in the repository.</string>
+	<key>settings.api.enable</key>
+	<string>Enable</string>
+	<key>settings.api.hint</key>
+	<string>Access to records by time from this computer (loopback). The token goes in the Authorization: Bearer header.</string>
+	<key>settings.api.host</key>
+	<string>Host</string>
+	<key>settings.api.port</key>
+	<string>Port</string>
+	<key>settings.api.section</key>
+	<string>Local HTTP API</string>
+	<key>settings.api.token</key>
+	<string>Token</string>
+	<key>settings.general</key>
+	<string>General</string>
+	<key>settings.general.language</key>
+	<string>Recognition Language</string>
+	<key>settings.general.languageHint</key>
+	<string>Applies immediately, from the next interval on. “Auto” suits mixed speech.</string>
+	<key>settings.general.launchAtLogin</key>
+	<string>Launch at Login</string>
+	<key>settings.general.launchFailed</key>
+	<string>Could not change launch at login: %@</string>
+	<key>settings.general.openDataFolder</key>
+	<string>Open Data Folder</string>
+	<key>settings.general.openDataFolder.a11y</key>
+	<string>Open the Chronica data folder</string>
+	<key>settings.interval.hint</key>
+	<string>Applies on the fly, without restarting the recording. A higher speech threshold is stricter about silence.</string>
+	<key>settings.interval.max</key>
+	<string>Max. Length</string>
+	<key>settings.interval.min</key>
+	<string>Min. Length</string>
+	<key>settings.interval.section</key>
+	<string>Interval Slicing</string>
+	<key>settings.interval.silence</key>
+	<string>Cut Pause</string>
+	<key>settings.interval.vad</key>
+	<string>Speech Threshold</string>
+	<key>settings.language.auto</key>
+	<string>Auto</string>
+	<key>settings.language.english</key>
+	<string>English</string>
+	<key>settings.language.russian</key>
+	<string>Russian</string>
+	<key>settings.retention.hint</key>
+	<string>The core removes records older than the limit on its own — when recording starts and once a day afterwards. “Forever” removes nothing.</string>
+	<key>settings.retention.picker</key>
+	<string>Keep Transcripts</string>
+	<key>settings.retention.section</key>
+	<string>Transcript Retention</string>
+	<key>settings.screen</key>
+	<string>Screen Journal</string>
+	<key>settings.screen.hint</key>
+	<string>Chronica will take a screenshot from time to time, a local model will describe it in one phrase, and the screenshot is deleted right away. Neither images nor descriptions leave this computer. Requires the Screen Recording permission and a running Ollama.</string>
+	<key>settings.screen.observe</key>
+	<string>Observe the Screen</string>
+	<key>settings.screen.period</key>
+	<string>Frequency</string>
+	<key>settings.screen.probe</key>
+	<string>Check</string>
+	<key>settings.screen.probe.modelMissing</key>
+	<string>Ollama is running, but the model is missing. Run: %@</string>
+	<key>settings.screen.probe.ready</key>
+	<string>The model is ready — the journal will fill up.</string>
+	<key>settings.screen.probe.unavailable</key>
+	<string>Install Ollama (ollama.com) and run `ollama pull %@`.</string>
+	<key>settings.screen.probing</key>
+	<string>Checking…</string>
+	<key>settings.screen.retention</key>
+	<string>Keep Observations</string>
+	<key>settings.title</key>
+	<string>Settings</string>
+	<key>settings.vision.model</key>
+	<string>Model</string>
+	<key>settings.vision.model.a11y</key>
+	<string>Vision model name</string>
+	<key>settings.vision.ollamaURL</key>
+	<string>Ollama Address</string>
+	<key>settings.vision.section</key>
+	<string>Screen Journal Vision Model</string>
+	<key>stall.captureFailed</key>
+	<string>audio capture failed: %@</string>
+	<key>stall.coreError</key>
+	<string>the core reported an error</string>
+	<key>stall.noMetrics</key>
+	<string>the core stopped sending fresh metrics</string>
+	<key>stall.queueSaturated</key>
+	<string>the recognition queue stays saturated</string>
+	<key>state.error</key>
+	<string>Error</string>
+	<key>state.idle</key>
+	<string>Ready to Record</string>
+	<key>state.loading</key>
+	<string>Loading Model…</string>
+	<key>state.preparing</key>
+	<string>Preparing…</string>
+	<key>state.recording</key>
+	<string>Recording</string>
+	<key>state.stopping</key>
+	<string>Stopping…</string>
+	<key>unit.gigabytes</key>
+	<string>GB</string>
+	<key>unit.megabytes</key>
+	<string>MB</string>
+	<key>unit.milliseconds.short</key>
+	<string>ms</string>
+	<key>unit.seconds.short</key>
+	<string>s</string>
+	<key>vision.error.timeout</key>
+	<string>The local vision model did not answer in time</string>
+	<key>vision.probe.cancelled</key>
+	<string>The check was cancelled.</string>
+	<key>vision.probe.httpError</key>
+	<string>Ollama answers with an error — check the address.</string>
+	<key>vision.probe.installHint</key>
+	<string>Install and start Ollama (ollama.com), then run: ollama pull %@</string>
+	<key>vision.prompt.app</key>
+	<string>Active app: %@.</string>
+	<key>vision.prompt.body</key>
+	<string>This is a screenshot of a person at work. %@
+Describe in 1–2 sentences in English what work is being done: the gist of the action and which document/code/page/conversation it concerns. Only facts visible on the screen, no reasoning and no preamble.</string>
+	<key>vision.prompt.window</key>
+	<string>Window title: “%@”.</string>
+	<key>window.about</key>
+	<string>About Chronica</string>
+	<key>window.diagnostics</key>
+	<string>Diagnostics</string>
+</dict>
+</plist>

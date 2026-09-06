@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>event.age</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Событие: %lld с назад</string>
+			<key>many</key>
+			<string>Событие: %lld с назад</string>
+			<key>one</key>
+			<string>Событие: %lld с назад</string>
+			<key>other</key>
+			<string>Событие: %lld с назад</string>
+		</dict>
+	</dict>
+	<key>export.md.activities</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Дела (%lld)</string>
+			<key>many</key>
+			<string>Дела (%lld)</string>
+			<key>one</key>
+			<string>Дела (%lld)</string>
+			<key>other</key>
+			<string>Дела (%lld)</string>
+		</dict>
+	</dict>
+	<key>export.md.transcription</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Транскрипция (%lld интервала)</string>
+			<key>many</key>
+			<string>Транскрипция (%lld интервалов)</string>
+			<key>one</key>
+			<string>Транскрипция (%lld интервал)</string>
+			<key>other</key>
+			<string>Транскрипция (%lld интервалов)</string>
+		</dict>
+	</dict>
+	<key>export.md.windows</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Окна (%lld):</string>
+			<key>many</key>
+			<string>Окна (%lld):</string>
+			<key>one</key>
+			<string>Окна (%lld):</string>
+			<key>other</key>
+			<string>Окна (%lld):</string>
+		</dict>
+	</dict>
+	<key>metric.age</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Метрики: %lld с назад</string>
+			<key>many</key>
+			<string>Метрики: %lld с назад</string>
+			<key>one</key>
+			<string>Метрики: %lld с назад</string>
+			<key>other</key>
+			<string>Метрики: %lld с назад</string>
+		</dict>
+	</dict>
+	<key>metric.droppedIntervals</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Потеряно %lld интервала</string>
+			<key>many</key>
+			<string>Потеряно %lld интервалов</string>
+			<key>one</key>
+			<string>Потеряно %lld интервал</string>
+			<key>other</key>
+			<string>Потеряно %lld интервалов</string>
+		</dict>
+	</dict>
+	<key>metric.records</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>%lld записи</string>
+			<key>many</key>
+			<string>%lld записей</string>
+			<key>one</key>
+			<string>%lld запись</string>
+			<key>other</key>
+			<string>%lld записей</string>
+		</dict>
+	</dict>
+	<key>models.allWhisper</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Все варианты Whisper (%lld)</string>
+			<key>many</key>
+			<string>Все варианты Whisper (%lld)</string>
+			<key>one</key>
+			<string>Все варианты Whisper (%lld)</string>
+			<key>other</key>
+			<string>Все варианты Whisper (%lld)</string>
+		</dict>
+	</dict>
+	<key>models.languages.parakeet</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>%lld языка, вкл. русский</string>
+			<key>many</key>
+			<string>%lld языков, вкл. русский</string>
+			<key>one</key>
+			<string>%lld язык, вкл. русский</string>
+			<key>other</key>
+			<string>%lld языков, вкл. русский</string>
+		</dict>
+	</dict>
+	<key>models.languages.whisper</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>%lld языка</string>
+			<key>many</key>
+			<string>%lld языков</string>
+			<key>one</key>
+			<string>%lld язык</string>
+			<key>other</key>
+			<string>%lld языков</string>
+		</dict>
+	</dict>
+	<key>popover.words.a11y</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>Слов за сутки: %lld</string>
+			<key>many</key>
+			<string>Слов за сутки: %lld</string>
+			<key>one</key>
+			<string>Слов за сутки: %lld</string>
+			<key>other</key>
+			<string>Слов за сутки: %lld</string>
+		</dict>
+	</dict>
+	<key>popover.words.short</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>%lld сл</string>
+			<key>many</key>
+			<string>%lld сл</string>
+			<key>one</key>
+			<string>%lld сл</string>
+			<key>other</key>
+			<string>%lld сл</string>
+		</dict>
+	</dict>
+	<key>retention.days</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>%lld дня</string>
+			<key>many</key>
+			<string>%lld дней</string>
+			<key>one</key>
+			<string>%lld день</string>
+			<key>other</key>
+			<string>%lld дней</string>
+		</dict>
+	</dict>
+	<key>screen.period.minutes</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@value@</string>
+		<key>value</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>lld</string>
+			<key>few</key>
+			<string>%lld мин</string>
+			<key>many</key>
+			<string>%lld мин</string>
+			<key>one</key>
+			<string>%lld мин</string>
+			<key>other</key>
+			<string>%lld мин</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

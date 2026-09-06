@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>about.author</key>
+	<string>Разработал Вадим Макаров</string>
+	<key>about.github</key>
+	<string>GitHub: %@</string>
+	<key>about.license</key>
+	<string>Лицензия MIT. © 2026 Вадим Макаров.</string>
+	<key>about.local</key>
+	<string>Работает полностью на этом компьютере: аудио, снимки экрана и расшифровки никуда не отправляются.</string>
+	<key>about.modelAttribution</key>
+	<string>Модель Parakeet TDT — © NVIDIA, CC-BY-4.0.</string>
+	<key>about.notices</key>
+	<string>Сторонние компоненты</string>
+	<key>about.versionLine</key>
+	<string>Версия %1$@ (сборка %2$@)</string>
+	<key>activities.noSpeech</key>
+	<string>Речи в этот интервал не записано.</string>
+	<key>channel.mic</key>
+	<string>Микрофон</string>
+	<key>channel.system</key>
+	<string>Система</string>
+	<key>chart.time</key>
+	<string>Время</string>
+	<key>chart.track</key>
+	<string>Дорожка</string>
+	<key>chart.words</key>
+	<string>Слова</string>
+	<key>diag.cpu</key>
+	<string>CPU</string>
+	<key>diag.cpu.note</key>
+	<string>Может превышать 100% при нескольких потоках — как в «Мониторинге системы».</string>
+	<key>diag.droppedAudio.note</key>
+	<string>Часть звука не успела попасть в обработку. В норме этой строки нет.</string>
+	<key>diag.droppedIntervals.note</key>
+	<string>Эти интервалы не были распознаны и в историю не попали. В норме этой строки нет.</string>
+	<key>diag.empty</key>
+	<string>Показатели появятся во время записи.</string>
+	<key>diag.lag</key>
+	<string>Отставание</string>
+	<key>diag.lag.note</key>
+	<string>Насколько распознавание отстаёт от реального времени.</string>
+	<key>diag.load</key>
+	<string>Нагрузка</string>
+	<key>diag.memory</key>
+	<string>Память</string>
+	<key>diag.memory.note</key>
+	<string>Резидентная память процесса. Разбор по категориям — ниже.</string>
+	<key>diag.memoryBreakdown</key>
+	<string>На что уходит память</string>
+	<key>diag.queue</key>
+	<string>Очередь обработки</string>
+	<key>diag.queue.note</key>
+	<string>Интервалы, ожидающие распознавания. 0 — не отстаём.</string>
+	<key>diag.rtf</key>
+	<string>Доля реального времени (RTF)</string>
+	<key>diag.rtf.note</key>
+	<string>Меньше 1 — обрабатываем быстрее, чем говорят.</string>
+	<key>diag.speed</key>
+	<string>Скорость обработки</string>
+	<key>error.audio.engineStart</key>
+	<string>Не удалось запустить аудиодвижок: %@</string>
+	<key>error.audio.inputLost</key>
+	<string>Микрофон перестал отдавать звук: %@</string>
+	<key>error.audio.micDenied</key>
+	<string>Нет доступа к микрофону. Откройте Системные настройки → Конфиденциальность и безопасность → Микрофон и разрешите доступ Chronica.</string>
+	<key>error.audio.micNotDetermined</key>
+	<string>Доступ к микрофону ещё не выдан. Подтвердите системный запрос и повторите.</string>
+	<key>error.audio.osStatus</key>
+	<string>Ошибка Core Audio на этапе «%1$@» (код %2$@).</string>
+	<key>error.audio.reason.micUnavailable</key>
+	<string>микрофон недоступен</string>
+	<key>error.audio.reason.noDisplay</key>
+	<string>нет доступного дисплея</string>
+	<key>error.audio.reason.noMechanism</key>
+	<string>нет доступного механизма захвата</string>
+	<key>error.audio.reason.noSink</key>
+	<string>нет приёмника аудио</string>
+	<key>error.audio.reason.sckNoStream</key>
+	<string>ScreenCaptureKit не вернул поток</string>
+	<key>error.audio.reason.sckTimeout</key>
+	<string>тайм-аут запуска ScreenCaptureKit (%lld с)</string>
+	<key>error.audio.reason.sourceDeinit</key>
+	<string>источник захвата деинициализирован</string>
+	<key>error.audio.systemUnavailable</key>
+	<string>Не удалось захватить системный звук: %@</string>
+	<key>error.audioPrefix</key>
+	<string>Аудио: %@</string>
+	<key>error.core.api</key>
+	<string>Локальный API не запустился. Проверьте адрес и порт в настройках.</string>
+	<key>error.core.audio</key>
+	<string>Проблема со звуком. Проверьте устройство ввода и разрешения.</string>
+	<key>error.core.backend</key>
+	<string>Движок распознавания не смог обработать звук. Перезапустите запись.</string>
+	<key>error.core.config</key>
+	<string>Неверные настройки записи. Проверьте параметры и повторите.</string>
+	<key>error.core.internal</key>
+	<string>Внутренняя ошибка ядра. Перезапустите запись.</string>
+	<key>error.core.modelDownload</key>
+	<string>Не удалось скачать модель. Проверьте интернет и место на диске.</string>
+	<key>error.core.modelLoad</key>
+	<string>Не удалось загрузить модель. Скачайте её заново и проверьте место на диске.</string>
+	<key>error.core.store</key>
+	<string>Не удалось сохранить данные. Проверьте место на диске и права доступа.</string>
+	<key>error.detail</key>
+	<string>%1$@ (%2$@)</string>
+	<key>error.modelDownload</key>
+	<string>Загрузка модели %1$@: %2$@</string>
+	<key>error.pipelineStalled</key>
+	<string>Критическая остановка транскрибации: %@. Запись остановлена. Перезапустите Chronica.</string>
+	<key>error.queueDrop</key>
+	<string>Предупреждение: ASR не успел обработать интервал (потеряно: %lld). Запись продолжается.</string>
+	<key>error.relaunchFailed</key>
+	<string>Не удалось запустить новый процесс Chronica. Текущая запись уже остановлена; повторите перезапуск.</string>
+	<key>error.unexpected</key>
+	<string>Непредвиденная ошибка.</string>
+	<key>error.wakeCapture</key>
+	<string>Захват после пробуждения: %@</string>
+	<key>export.md.activities.empty</key>
+	<string>_Нет записанных дел за период._</string>
+	<key>export.md.exportedAt</key>
+	<string>Экспортировано: %@</string>
+	<key>export.md.period</key>
+	<string>Период: %1$@ — %2$@</string>
+	<key>export.md.title</key>
+	<string>Журнал %@</string>
+	<key>export.md.transcription.empty</key>
+	<string>_Нет записанной речи за период._</string>
+	<key>fmt.today</key>
+	<string>Сегодня</string>
+	<key>fmt.yesterday</key>
+	<string>Вчера</string>
+	<key>health.degraded</key>
+	<string>Один из источников звука недоступен — пишем остальные</string>
+	<key>health.dropped</key>
+	<string>Часть речи не распознана (перегрузка)</string>
+	<key>health.sleep</key>
+	<string>Пауза: компьютер спал, восстанавливаем захват</string>
+	<key>health.stalled</key>
+	<string>Запись остановлена — перезапустите Chronica</string>
+	<key>hint.sourceChangeRestart</key>
+	<string>Изменённый набор источников применится при следующем старте записи.</string>
+	<key>history.copy</key>
+	<string>Копировать</string>
+	<key>history.noResults.description</key>
+	<string>Уточните запрос или измените период.</string>
+	<key>history.noResults.title</key>
+	<string>Ничего не найдено</string>
+	<key>history.search.placeholder</key>
+	<string>Поиск по тексту</string>
+	<key>history.searching</key>
+	<string>Поиск по смыслу…</string>
+	<key>journal.export</key>
+	<string>Экспорт…</string>
+	<key>journal.export.a11y</key>
+	<string>Экспорт за период</string>
+	<key>journal.export.failed</key>
+	<string>Не удалось сохранить экспорт: %@</string>
+	<key>journal.export.help</key>
+	<string>Выгрузить дела, окна и транскрипцию за выбранный период</string>
+	<key>journal.feed.empty.description</key>
+	<string>Здесь появятся реплики и дела с экрана за выбранный период.</string>
+	<key>journal.feed.empty.title</key>
+	<string>Записей пока нет</string>
+	<key>journal.period.from.a11y</key>
+	<string>Начало периода</string>
+	<key>journal.period.to.a11y</key>
+	<string>Конец периода</string>
+	<key>journal.scale.daily</key>
+	<string>по дням</string>
+	<key>journal.scale.hourly</key>
+	<string>по часам</string>
+	<key>journal.session.appClosed</key>
+	<string>Приложение закрылось</string>
+	<key>journal.session.failed</key>
+	<string>Сбой записи</string>
+	<key>journal.session.started</key>
+	<string>Запись включена %@</string>
+	<key>journal.session.stopped</key>
+	<string>Запись остановлена %@</string>
+	<key>journal.today</key>
+	<string>Сегодня</string>
+	<key>journal.today.help</key>
+	<string>Показать и экспортировать только сегодня</string>
+	<key>journal.voiceActivity</key>
+	<string>Голосовая активность</string>
+	<key>journal.voiceActivity.a11y</key>
+	<string>График голосовой активности за период</string>
+	<key>journal.voiceActivity.empty</key>
+	<string>За период речи не записано</string>
+	<key>live.listening</key>
+	<string>слушаю…</string>
+	<key>live.processing</key>
+	<string>обрабатываю…</string>
+	<key>live.silence</key>
+	<string>тишина…</string>
+	<key>memory.cat.app</key>
+	<string>Приложение и система</string>
+	<key>memory.cat.app.detail</key>
+	<string>интерфейс, буферы звука и служебные данные</string>
+	<key>memory.cat.model</key>
+	<string>Модель распознавания (%@)</string>
+	<key>memory.cat.model.detail</key>
+	<string>файлы модели, загруженные в память</string>
+	<key>memory.cat.runtime</key>
+	<string>Рабочая память распознавания</string>
+	<key>memory.cat.runtime.detail</key>
+	<string>промежуточные данные при обработке звука; больше всего сразу после загрузки модели, затем убывает</string>
+	<key>memory.cat.search</key>
+	<string>Поиск по смыслу</string>
+	<key>memory.cat.search.detail</key>
+	<string>включается при поиске в Журнале и освобождается после него</string>
+	<key>memory.category.line</key>
+	<string>%1$@%2$@ · %3$lld%% — %4$@</string>
+	<key>memory.notLoaded</key>
+	<string>не загружена — %1$@; ≈%2$@ когда активна</string>
+	<key>memory.total</key>
+	<string>Расход памяти (RSS): %@</string>
+	<key>menu.about</key>
+	<string>О Chronica</string>
+	<key>menu.openWindow</key>
+	<string>Открыть окно</string>
+	<key>menu.quit</key>
+	<string>Выйти</string>
+	<key>menu.settings</key>
+	<string>Настройки…</string>
+	<key>menu.stopRecording</key>
+	<string>Остановить запись</string>
+	<key>metric.droppedAudio</key>
+	<string>потеряно аудио: %lld с</string>
+	<key>metric.median.short</key>
+	<string>мед</string>
+	<key>metric.peak.short</key>
+	<string>пик</string>
+	<key>metric.stopped</key>
+	<string>Поток остановлен</string>
+	<key>metric.storeLine</key>
+	<string>Данные: %1$@ · %2$@</string>
+	<key>metric.waiting</key>
+	<string>Метрики: ожидание</string>
+	<key>migration.folderFailed</key>
+	<string>Не удалось перенести папку данных «%1$@» в «%2$@». Приложение продолжает работать со старой папкой — данные и модели целы.</string>
+	<key>models.active.a11y</key>
+	<string>Активная модель</string>
+	<key>models.apply</key>
+	<string>Применить</string>
+	<key>models.applying</key>
+	<string>Применяю…</string>
+	<key>models.badge.active</key>
+	<string>Активная</string>
+	<key>models.badge.selected</key>
+	<string>Выбрана</string>
+	<key>models.delete.a11y</key>
+	<string>Удалить модель %@</string>
+	<key>models.delete.help</key>
+	<string>Удалить</string>
+	<key>models.download.a11y</key>
+	<string>Скачать модель %@</string>
+	<key>models.download.help</key>
+	<string>Скачать</string>
+	<key>models.empty.description</key>
+	<string>Он загрузится из ядра.</string>
+	<key>models.empty.title</key>
+	<string>Список моделей пуст</string>
+	<key>models.name.whisper</key>
+	<string>Whisper %@</string>
+	<key>models.pending.hint</key>
+	<string>Смена модели перезапускает запись.</string>
+	<key>models.pending.selected</key>
+	<string>Выбрана: %@</string>
+	<key>models.progress.a11y</key>
+	<string>Загрузка %lld процентов</string>
+	<key>models.select.a11y</key>
+	<string>Выбрать модель %@</string>
+	<key>models.select.help</key>
+	<string>Выбрать</string>
+	<key>models.select.pending</key>
+	<string>Выбрана — нажмите «Применить»</string>
+	<key>models.size.parakeet</key>
+	<string>≈640 МБ</string>
+	<key>models.size.unknown</key>
+	<string>размер уточняется</string>
+	<key>models.title</key>
+	<string>Модели</string>
+	<key>popover.activity24h</key>
+	<string>Активность за 24 часа</string>
+	<key>popover.currentInterval.a11y</key>
+	<string>Время текущего интервала</string>
+	<key>popover.downloadModel</key>
+	<string>Скачать модель %1$@ (%2$@)</string>
+	<key>popover.downloading</key>
+	<string>Скачиваем %@</string>
+	<key>popover.lines</key>
+	<string>Журнал</string>
+	<key>popover.lines.idle</key>
+	<string>Начните запись</string>
+	<key>popover.lines.waiting</key>
+	<string>Записи появятся после нарезки интервала</string>
+	<key>popover.micDenied</key>
+	<string>Chronica не может слушать микрофон, пока доступ запрещён.</string>
+	<key>popover.notEnoughData</key>
+	<string>Недостаточно данных</string>
+	<key>popover.openMicSettings</key>
+	<string>Открыть настройки микрофона</string>
+	<key>popover.openSection.a11y</key>
+	<string>Открыть раздел «%@»</string>
+	<key>popover.restartApp</key>
+	<string>Перезапустить Chronica</string>
+	<key>popover.retry</key>
+	<string>Повторить</string>
+	<key>popover.source.a11y</key>
+	<string>Источник «%@»</string>
+	<key>popover.sources</key>
+	<string>Источники</string>
+	<key>popover.start</key>
+	<string>Начать запись</string>
+	<key>popover.stop</key>
+	<string>Остановить</string>
+	<key>retention.forever</key>
+	<string>Всегда</string>
+	<key>screen.captureFailed</key>
+	<string>Снимок экрана не удался: %@</string>
+	<key>screen.error.encodeFailed</key>
+	<string>не удалось закодировать кадр</string>
+	<key>screen.error.noDisplays</key>
+	<string>нет доступных дисплеев</string>
+	<key>screen.noPermission</key>
+	<string>Нет доступа «Запись экрана». Выдайте его в Системных настройках → Конфиденциальность и безопасность → Запись экрана, затем ПЕРЕЗАПУСТИТЕ Chronica (macOS не применяет это разрешение к уже запущенному приложению).</string>
+	<key>screen.storeError</key>
+	<string>Хранилище журнала экрана: %@</string>
+	<key>screen.visionUnavailable</key>
+	<string>Vision-модель недоступна: %@</string>
+	<key>section.journal</key>
+	<string>Журнал</string>
+	<key>section.models</key>
+	<string>Модели</string>
+	<key>section.settings</key>
+	<string>Настройки</string>
+	<key>settings.advanced</key>
+	<string>Дополнительно</string>
+	<key>settings.advanced.diagnostics</key>
+	<string>Диагностика…</string>
+	<key>settings.advanced.diagnostics.a11y</key>
+	<string>Открыть окно диагностики</string>
+	<key>settings.api.copied</key>
+	<string>Скопировано</string>
+	<key>settings.api.copy</key>
+	<string>Скопировать</string>
+	<key>settings.api.copy.a11y</key>
+	<string>Скопировать токен доступа</string>
+	<key>settings.api.docs</key>
+	<string>Документация API — docs/API.md в репозитории.</string>
+	<key>settings.api.enable</key>
+	<string>Включить</string>
+	<key>settings.api.hint</key>
+	<string>Доступ к записям по времени с этого компьютера (loopback). Токен передаётся заголовком Authorization: Bearer.</string>
+	<key>settings.api.host</key>
+	<string>Хост</string>
+	<key>settings.api.port</key>
+	<string>Порт</string>
+	<key>settings.api.section</key>
+	<string>Локальный HTTP API</string>
+	<key>settings.api.token</key>
+	<string>Токен</string>
+	<key>settings.general</key>
+	<string>Основные</string>
+	<key>settings.general.language</key>
+	<string>Язык распознавания</string>
+	<key>settings.general.languageHint</key>
+	<string>Применяется сразу, со следующего интервала. «Авто» подходит для смешанной речи.</string>
+	<key>settings.general.launchAtLogin</key>
+	<string>Запускать при входе в систему</string>
+	<key>settings.general.launchFailed</key>
+	<string>Не удалось изменить автозапуск: %@</string>
+	<key>settings.general.openDataFolder</key>
+	<string>Открыть папку данных</string>
+	<key>settings.general.openDataFolder.a11y</key>
+	<string>Открыть папку с данными Chronica</string>
+	<key>settings.interval.hint</key>
+	<string>Применяется на лету, без перезапуска записи. Выше порог речи — строже к тишине.</string>
+	<key>settings.interval.max</key>
+	<string>Макс. длина</string>
+	<key>settings.interval.min</key>
+	<string>Мин. длина</string>
+	<key>settings.interval.section</key>
+	<string>Нарезка интервалов</string>
+	<key>settings.interval.silence</key>
+	<string>Пауза для разреза</string>
+	<key>settings.interval.vad</key>
+	<string>Порог речи</string>
+	<key>settings.language.auto</key>
+	<string>Авто</string>
+	<key>settings.language.english</key>
+	<string>English</string>
+	<key>settings.language.russian</key>
+	<string>Русский</string>
+	<key>settings.retention.hint</key>
+	<string>Записи старше срока ядро удаляет само — при старте записи и далее раз в сутки. «Всегда» ничего не удаляет.</string>
+	<key>settings.retention.picker</key>
+	<string>Хранить расшифровки</string>
+	<key>settings.retention.section</key>
+	<string>Хранение расшифровок</string>
+	<key>settings.screen</key>
+	<string>Журнал экрана</string>
+	<key>settings.screen.hint</key>
+	<string>Chronica будет периодически делать снимок экрана, локальная модель опишет его одной фразой, а сам снимок сразу удаляется. Ни изображения, ни описания не покидают этот компьютер. Нужны разрешение «Запись экрана» и установленная Ollama.</string>
+	<key>settings.screen.observe</key>
+	<string>Наблюдать за экраном</string>
+	<key>settings.screen.period</key>
+	<string>Частота</string>
+	<key>settings.screen.probe</key>
+	<string>Проверить</string>
+	<key>settings.screen.probe.modelMissing</key>
+	<string>Ollama работает, но модели нет. Выполните: %@</string>
+	<key>settings.screen.probe.ready</key>
+	<string>Модель готова — журнал будет заполняться.</string>
+	<key>settings.screen.probe.unavailable</key>
+	<string>Установите Ollama (ollama.com) и выполните `ollama pull %@`.</string>
+	<key>settings.screen.probing</key>
+	<string>Проверяю…</string>
+	<key>settings.screen.retention</key>
+	<string>Хранить наблюдения</string>
+	<key>settings.title</key>
+	<string>Настройки</string>
+	<key>settings.vision.model</key>
+	<string>Модель</string>
+	<key>settings.vision.model.a11y</key>
+	<string>Имя vision-модели</string>
+	<key>settings.vision.ollamaURL</key>
+	<string>Адрес Ollama</string>
+	<key>settings.vision.section</key>
+	<string>Vision-модель журнала экрана</string>
+	<key>stall.captureFailed</key>
+	<string>захват аудио завершился с ошибкой: %@</string>
+	<key>stall.coreError</key>
+	<string>ядро сообщило об ошибке</string>
+	<key>stall.noMetrics</key>
+	<string>ядро не присылает свежие метрики</string>
+	<key>stall.queueSaturated</key>
+	<string>ASR-очередь остаётся переполненной</string>
+	<key>state.error</key>
+	<string>Ошибка</string>
+	<key>state.idle</key>
+	<string>Готов к записи</string>
+	<key>state.loading</key>
+	<string>Загрузка модели…</string>
+	<key>state.preparing</key>
+	<string>Подготовка…</string>
+	<key>state.recording</key>
+	<string>Идёт запись</string>
+	<key>state.stopping</key>
+	<string>Остановка…</string>
+	<key>unit.gigabytes</key>
+	<string>ГБ</string>
+	<key>unit.megabytes</key>
+	<string>МБ</string>
+	<key>unit.milliseconds.short</key>
+	<string>мс</string>
+	<key>unit.seconds.short</key>
+	<string>с</string>
+	<key>vision.error.timeout</key>
+	<string>Локальная vision-модель не ответила за отведённое время</string>
+	<key>vision.probe.cancelled</key>
+	<string>Проверка отменена.</string>
+	<key>vision.probe.httpError</key>
+	<string>Ollama отвечает с ошибкой — проверьте адрес.</string>
+	<key>vision.probe.installHint</key>
+	<string>Установите и запустите Ollama (ollama.com), затем: ollama pull %@</string>
+	<key>vision.prompt.app</key>
+	<string>Активное приложение: %@.</string>
+	<key>vision.prompt.body</key>
+	<string>Это скриншот экрана работающего человека. %@
+Опиши в 1–2 предложениях по-русски, какая работа выполняется: суть действия, над каким документом/кодом/страницей/перепиской. Только факты с экрана, без рассуждений и вступлений.</string>
+	<key>vision.prompt.window</key>
+	<string>Заголовок окна: «%@».</string>
+	<key>window.about</key>
+	<string>О Chronica</string>
+	<key>window.diagnostics</key>
+	<string>Диагностика</string>
+</dict>
+</plist>

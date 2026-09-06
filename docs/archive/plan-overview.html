@@ -1,0 +1,164 @@
+<title>Transcriber — план продукта</title>
+<style>
+  :root{
+    --bg:#101012; --bg2:#161618; --s1:#1e1e22; --s2:#26262b; --line:#ffffff14;
+    --tp:#f2f2f7; --ts:#9a9aa2; --tt:#6c6c72;
+    --accent:#5e5ce6; --mic:#32d6c6; --rem:#ffb340;
+    --rec:#ff453a; --warn:#ff9f0a; --ok:#30d158; --proc:#64d2ff;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#1a1830 0%,var(--bg) 55%);
+    color:var(--tp);font-family:-apple-system,"SF Pro Text",Segoe UI,Roboto,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased;padding:0 0 80px}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+  header{padding:64px 0 28px}
+  .kick{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:clamp(30px,5vw,46px);font-weight:680;margin:14px 0 8px;letter-spacing:-.02em}
+  .sub{color:var(--ts);font-size:18px;max-width:680px}
+  .pill{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:12px;
+    color:var(--ts);background:var(--s1);border:1px solid var(--line);border-radius:999px;padding:6px 12px;margin:18px 8px 0 0}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--rec);box-shadow:0 0 10px var(--rec)}
+  h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--tt);
+    margin:54px 0 18px;font-weight:640}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:780px){.g2,.g3,.g4{grid-template-columns:1fr}}
+  .card{background:var(--s1);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .card .k{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--tt);margin-bottom:6px}
+  .card .v{font-size:15px;font-weight:560} .card .d{color:var(--ts);font-size:13px;margin-top:4px}
+  /* architecture */
+  .arch{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .layer{border:1px dashed #ffffff20;border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .layer .lt{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ts);margin-bottom:10px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .blk{flex:1;min-width:120px;background:var(--s2);border:1px solid var(--line);border-radius:10px;
+    padding:10px 12px;font-size:13px}
+  .blk b{display:block;font-size:13px} .blk span{color:var(--ts);font-size:12px;font-family:var(--mono)}
+  .core{border-color:#5e5ce655;background:linear-gradient(180deg,#1d1c2e,#1a1a1f)}
+  .arrow{text-align:center;color:var(--accent);font-family:var(--mono);font-size:12px;margin:2px 0 10px}
+  /* roadmap */
+  .road{display:grid;gap:0}
+  .ph{display:grid;grid-template-columns:84px 1fr;gap:16px;padding:16px 0;border-top:1px solid var(--line)}
+  .ph:last-child{border-bottom:1px solid var(--line)}
+  .ph .num{font-family:var(--mono);font-size:13px;color:var(--accent)}
+  .ph .num small{display:block;color:var(--tt);font-size:11px;margin-top:3px}
+  .ph .t{font-weight:600;margin-bottom:3px} .ph .x{color:var(--ts);font-size:13px}
+  /* swatches */
+  .sw{display:flex;flex-direction:column;gap:8px}
+  .chip{height:46px;border-radius:10px;border:1px solid var(--line);display:flex;align-items:flex-end;
+    padding:7px 9px;font-family:var(--mono);font-size:10.5px;color:#000;font-weight:600}
+  .chip.lt{color:#fff}
+  .lbl{font-size:11px;color:var(--ts);font-family:var(--mono)}
+  /* menubar states */
+  .mb{display:flex;gap:14px;flex-wrap:wrap}
+  .state{background:var(--s1);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;flex:1;min-width:120px}
+  .ico{font-size:24px;height:34px;display:flex;align-items:center;justify-content:center}
+  .wave span{display:inline-block;width:3px;margin:0 1px;border-radius:2px;background:var(--mic);vertical-align:middle}
+  .state .nm{font-size:12px;font-weight:600;margin-top:6px} .state .sd{font-size:11px;color:var(--tt)}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tt);font-weight:600}
+  td .tag{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:6px;background:var(--s2);color:var(--ts)}
+  .tag.def{background:#5e5ce622;color:#a9a8f5} .tag.fb{background:#ffb34022;color:var(--rem)}
+  .foot{margin-top:50px;color:var(--tt);font-size:12px;font-family:var(--mono);border-top:1px solid var(--line);padding-top:18px}
+  .scroll{overflow-x:auto}
+</style>
+
+<div class="wrap">
+<header>
+  <div class="kick">План продукта · 2026-06-18</div>
+  <h1>Transcriber → продукт</h1>
+  <div class="sub">Переиспользуемое нативное ядро + macOS-приложение в строке меню. Тёмный интерфейс, локальная транскрипция двух дорожек, модели whisper и parakeet.</div>
+  <div>
+    <span class="pill"><span class="dot"></span> Rust core · UniFFI</span>
+    <span class="pill">sherpa-onnx</span>
+    <span class="pill">SwiftUI · NSStatusItem</span>
+    <span class="pill">macOS 14+ · DMG + Sparkle</span>
+    <span class="pill">iOS / Android — потом</span>
+  </div>
+</header>
+
+<h2>Ключевые решения</h2>
+<div class="grid g3">
+  <div class="card"><div class="k">Язык ядра</div><div class="v">Rust</div><div class="d">UniFFI → Swift/Kotlin, безопасный realtime-конвейер</div></div>
+  <div class="card"><div class="k">ASR-рантайм</div><div class="v">sherpa-onnx</div><div class="d">Один рантайм для whisper И parakeet на всех платформах</div></div>
+  <div class="card"><div class="k">Дефолт-модель</div><div class="v">Parakeet TDT 0.6b v3</div><div class="d">Мультиязычная (вкл. RU), ~640 MB, без перебора языков</div></div>
+  <div class="card"><div class="k">Захват аудио</div><div class="v">На платформе</div><div class="d">Push PCM в ядро; ядро — чистый DSP+ASR</div></div>
+  <div class="card"><div class="k">Системный звук</div><div class="v">Core Audio taps</div><div class="d">14.4+ → ScreenCaptureKit → BlackHole fallback. Без BlackHole по умолчанию</div></div>
+  <div class="card"><div class="k">Хранилище</div><div class="v">SQLite</div><div class="d">Замена intervals.jsonl: запросы по датам, агрегаты, транзакции</div></div>
+  <div class="card"><div class="k">Каркас macOS</div><div class="v">NSStatusItem + SwiftUI</div><div class="d">Анимированная иконка записи, доп. окна, agent-app</div></div>
+  <div class="card"><div class="k">VAD</div><div class="v">Silero + RMS</div><div class="d">Встроен в sherpa-onnx, точнее WebRTC</div></div>
+  <div class="card"><div class="k">Выбрасываем</div><div class="v">Web/Flask/auth</div><div class="d">+ Voxtral/NeMo/Qwen, quantization, рудименты</div></div>
+</div>
+
+<h2>Архитектура</h2>
+<div class="arch">
+  <div class="layer">
+    <div class="lt">Нативные оболочки — UI · захват аудио · разрешения · загрузка моделей</div>
+    <div class="row">
+      <div class="blk"><b>macOS</b><span>SwiftUI · AVAudioEngine · CoreAudio tap</span></div>
+      <div class="blk"><b>iOS — потом</b><span>SwiftUI · AVAudioSession</span></div>
+      <div class="blk"><b>Android — потом</b><span>Compose · AudioRecord</span></div>
+    </div>
+  </div>
+  <div class="arrow">▼ &nbsp; UniFFI (Swift / Kotlin) &nbsp; ▲ события</div>
+  <div class="layer core">
+    <div class="lt">transcriber-core (Rust → xcframework / .so)</div>
+    <div class="row" style="margin-bottom:10px">
+      <div class="blk"><b>Resampler 16k</b><span>push_audio_frame</span></div>
+      <div class="blk"><b>Silero VAD + RMS</b><span>детект тишины</span></div>
+      <div class="blk"><b>IntervalCutter</b><span>min300/max600/sil2000</span></div>
+    </div>
+    <div class="row">
+      <div class="blk"><b>ASR layer</b><span>Parakeet · Whisper · [Apple CoreML]</span></div>
+      <div class="blk"><b>LanguagePicker</b><span>whisper auto ru/en</span></div>
+      <div class="blk"><b>SQLite store</b><span>intervals · voice_activity</span></div>
+      <div class="blk"><b>Metrics/Events</b><span>RTF · lag · queue</span></div>
+    </div>
+  </div>
+</div>
+
+<h2>Модели</h2>
+<div class="scroll"><table>
+  <tr><th>Модель</th><th>Диск</th><th>RAM</th><th>Языки</th><th>Роль</th></tr>
+  <tr><td>Parakeet TDT 0.6b v3 int8</td><td>~640 MB</td><td>~1.2 GB</td><td>25 EU вкл. RU/UK</td><td><span class="tag def">дефолт</span></td></tr>
+  <tr><td>whisper large-v3-turbo q5/q8</td><td>547–830 MB</td><td>~1.6–2 GB</td><td>мультиязык</td><td><span class="tag fb">fallback</span></td></tr>
+  <tr><td>Parakeet v3 (FluidAudio CoreML)</td><td>~2.5 GB</td><td>—</td><td>те же</td><td><span class="tag">Apple fast-path</span></td></tr>
+  <tr><td>whisper small q5</td><td>~190 MB</td><td>~850 MB</td><td>мультиязык</td><td><span class="tag">офлайн-минимум</span></td></tr>
+</table></div>
+
+<h2>Дорожная карта</h2>
+<div class="road">
+  <div class="ph"><div class="num">Фаза 0<small>1–2 нед</small></div><div><div class="t">Решения и замеры</div><div class="x">Бенчмарк parakeet-int8 vs CoreML на целевом Mac, A/B качества RU, лицензии (CC-BY), скелет monorepo + CI, фиксация ABI.</div></div></div>
+  <div class="ph"><div class="num">Фаза 1<small>3–5 нед</small></div><div><div class="t">Ядро MVP (Rust)</div><div class="x">sherpa-onnx, конвейер push→VAD→cutter→ASR→SQLite→события, порт логики с golden-тестами, UniFFI, CLI-харнесс.</div></div></div>
+  <div class="ph"><div class="num">Фаза 2<small>3–4 нед</small></div><div><div class="t">Каркас macOS</div><div class="x">NSStatusItem agent-app, линковка ядра, захват mic + системный звук (tap/SCK), базовый popover, анимированная иконка.</div></div></div>
+  <div class="ph"><div class="num">Фаза 3<small>4–6 нед</small></div><div><div class="t">Полный UI</div><div class="x">Popover, окно Live/История/Дашборд, Settings (5 табов), Model Manager со скачиванием, дизайн-система.</div></div></div>
+  <div class="ph"><div class="num">Фаза 4<small>2–3 нед</small></div><div><div class="t">Прод-готовность</div><div class="x">Signing + notarization + Sparkle, онбординг разрешений, автозапуск, энергопрофиль, бета-DMG.</div></div></div>
+  <div class="ph"><div class="num">Фаза 5<small>позже</small></div><div><div class="t">Кросс-платформа</div><div class="x">Android (cargo-ndk, Kotlin, Compose), iOS (переиспользование xcframework). Подтверждение переиспользуемости ядра.</div></div></div>
+</div>
+
+<h2>Дизайн-система · тёмная</h2>
+<div class="grid g4" style="margin-bottom:18px">
+  <div class="sw"><div class="chip lt" style="background:#1c1c1e">#1C1C1E</div><div class="lbl">bg / base</div></div>
+  <div class="sw"><div class="chip lt" style="background:#252528">#252528</div><div class="lbl">surface / 1</div></div>
+  <div class="sw"><div class="chip lt" style="background:#f2f2f7;color:#000">#F2F2F7</div><div class="lbl">text / primary</div></div>
+  <div class="sw"><div class="chip lt" style="background:#5e5ce6">#5E5CE6</div><div class="lbl">accent · indigo</div></div>
+  <div class="sw"><div class="chip" style="background:#32d6c6">#32D6C6</div><div class="lbl">track / mic · teal</div></div>
+  <div class="sw"><div class="chip" style="background:#ffb340">#FFB340</div><div class="lbl">track / remote · amber</div></div>
+  <div class="sw"><div class="chip" style="background:#ff453a">#FF453A</div><div class="lbl">sem / rec</div></div>
+  <div class="sw"><div class="chip" style="background:#64d2ff">#64D2FF</div><div class="lbl">sem / processing</div></div>
+</div>
+
+<div class="mb">
+  <div class="state"><div class="ico" style="color:var(--ts)">∿</div><div class="nm">Idle</div><div class="sd">готов</div></div>
+  <div class="state"><div class="ico wave">
+    <span style="height:10px"></span><span style="height:20px"></span><span style="height:28px"></span><span style="height:16px"></span><span style="height:8px"></span>
+  </div><div class="nm" style="color:var(--rec)">●&nbsp;Recording</div><div class="sd">уровень по RMS</div></div>
+  <div class="state"><div class="ico" style="color:var(--proc)">∿</div><div class="nm" style="color:var(--proc)">Processing</div><div class="sd">пульсация · N в очереди</div></div>
+  <div class="state"><div class="ico" style="color:var(--warn)">⚠</div><div class="nm" style="color:var(--warn)">Error</div><div class="sd">нет устройства</div></div>
+  <div class="state"><div class="ico" style="color:var(--tt)">⊘</div><div class="nm">Paused</div><div class="sd">приглушено</div></div>
+</div>
+
+<div class="foot">PRODUCT_PLAN.md · PROJECT_MAP.md — полные версии в репозитории · mic = teal, remote = amber проходят через весь UI</div>
+</div>

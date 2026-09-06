@@ -1,0 +1,184 @@
+# CI: ядро (Ubuntu + macOS — заодно доказывает кроссплатформенность дефолтных
+# фич), реальный набор фич ASR (только macOS: sherpa-rs тянет готовые бинарники
+# ONNX Runtime, whisper-rs собирает whisper.cpp через cmake) и macOS-приложение
+# против mock-ядра.
+#
+# Почему приложение всё ещё против mock: swift build с реальным ядром требует
+# готовых dylib sherpa/ORT и статических ggml-архивов; в CI это дорого и хрупко.
+# Реальная линковка проверяется локально (docs/STATUS.md) и в release.yml.
+#
+# Android: собирается локально (нужен NDK + кросс-сборка .so); в CI не гоняем.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+# Ветку/PR пересобираем с отменой предыдущего прогона — очередь на macOS-раннеры
+# дорогая.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: core (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Format
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Tests (default features)
+        run: cargo test
+      - name: FFI surface compiles
+        run: cargo check --features ffi
+
+  core-real-asr:
+    # Тот же набор фич, с которым собирается прод-приложение
+    # (apple/Scripts/build-core.sh). Ловит поломки FFI/типов на путях sherpa и
+    # whisper.cpp, которые дефолтная (mock) сборка не компилирует вовсе.
+    #
+    # Только macOS: sherpa-rs скачивает готовые бинарники (нужна сеть),
+    # whisper-rs-sys собирает whisper.cpp через cmake (на macos-latest cmake
+    # предустановлен). Это `cargo check`, а не `test`: веса моделей в CI не
+    # качаем.
+    name: core (real ASR features) check
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: core
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          # Отдельный ключ: артефакты сборки native-зависимостей несовместимы
+          # с кэшем mock-джобы.
+          key: real-asr
+      - name: Toolchain versions
+        run: cmake --version && cargo --version
+      - name: Check (store,api,download,sherpa,whispercpp,ffi)
+        env:
+          MACOSX_DEPLOYMENT_TARGET: '14.0'
+        run: cargo check --no-default-features --features store,api,download,sherpa,whispercpp,ffi
+
+  app-macos:
+    name: macOS app (mock core)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+      - name: Build core (mock ASR + FFI)
+        working-directory: core
+        run: |
+          cargo build --no-default-features --features store,api,download,mock-asr,ffi
+          mkdir -p ../apple/lib
+          cp target/debug/libtranscriber_core.a ../apple/lib/
+      - name: Swift build + tests
+        working-directory: apple
+        env:
+          TRANSCRIBER_CORE_MOCK: "1"
+        run: |
+          swift build
+          swift test
+
+  packaging:
+    # Быстрые проверки релизной обвязки: синтаксис shell-скриптов, валидность
+    # plist'ов, синхронность версий. Ловит опечатки в скриптах до релиза, когда
+    # цена ошибки — сорванная нотаризация.
+    name: packaging & versions
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: core
+          # Свой ключ: релизный профиль CLI не делит артефакты с debug-джобами.
+          key: cli-release
+      - name: Shell syntax (bash -n)
+        run: |
+          set -euo pipefail
+          for f in apple/Scripts/*.sh scripts/*.sh; do
+            echo "  $f"
+            bash -n "$f"
+          done
+      - name: Plist lint
+        run: plutil -lint apple/Resources/Info.plist apple/Resources/Chronica.entitlements apple/Resources/*/InfoPlist.strings
+      - name: Plists are well-formed XML
+        # Строже, чем plutil: codesign читает entitlements парсером AMFI,
+        # который отвергает, например, '--' внутри XML-комментария — а plutil
+        # такой файл считает валидным. Без этой проверки ошибка всплывёт только
+        # на шаге подписи в релизе.
+        run: xmllint --noout apple/Resources/Info.plist apple/Resources/Chronica.entitlements
+      - name: Entitlements contain microphone access
+        # Под Hardened Runtime без этого entitlement микрофон молча не работает —
+        # регрессия была бы заметна только на реальном устройстве.
+        run: |
+          /usr/libexec/PlistBuddy -c 'Print :com.apple.security.device.audio-input' \
+            apple/Resources/Chronica.entitlements | grep -qx true
+      - name: codesign принимает entitlements
+        # Окончательная проверка: подписываем ad-hoc фиктивный бинарник ровно
+        # тем же plist'ом и убеждаемся, что права реально встроились. Ловит всё,
+        # что пропустили plutil и xmllint.
+        run: |
+          set -euo pipefail
+          cp /bin/echo "$RUNNER_TEMP/entitlement-probe"
+          codesign --force --sign - \
+            --entitlements apple/Resources/Chronica.entitlements \
+            "$RUNNER_TEMP/entitlement-probe"
+          codesign --display --entitlements - "$RUNNER_TEMP/entitlement-probe" 2>&1 \
+            | grep -q 'com.apple.security.device.audio-input'
+      - name: CLI собирается без ML-рантайма и запускается
+        # Регрессия, которую ловит шаг: apple/Scripts/build-core.sh собирал ядро
+        # без ограничения таргетов и пересобирал заодно `[[bin]] chronica` с
+        # sherpa/whispercpp. Бинарь получал динамические зависимости
+        # @rpath/libonnxruntime*.dylib и @rpath/libsherpa-onnx-c-api.dylib, но
+        # своего LC_RPATH у него нет — любой запуск падал с
+        # «Library not loaded ... no LC_RPATH's found», хотя документация
+        # обещает работающий CLI без запущенного приложения.
+        #
+        # Только macOS: проверка линковки делается через otool (на Linux его нет).
+        working-directory: core
+        run: |
+          set -euo pipefail
+          cargo build --release --bin chronica --no-default-features --features store
+          otool -L target/release/chronica
+          # Именно `if ... exit 1`, а не `! otool | grep -q`: у отрицаемого
+          # конвейера `set -e` игнорирует ненулевой код (POSIX), и проверка
+          # молча пропускала бы регрессию.
+          if otool -L target/release/chronica | grep -qiE 'onnx|sherpa|whisper'; then
+            echo "::error::chronica слинкован с ML-рантаймом — CLI должен собираться без ML" >&2
+            exit 1
+          fi
+          # Справку читаем в переменную, а не в `| head`: под pipefail ранний
+          # выход head уронил бы шаг на EPIPE, а не на реальной проблеме.
+          help="$(./target/release/chronica --help)"
+          printf '%s\n' "$help" | sed -n '1,3p'
+      - name: Version sync + build number
+        run: ./scripts/check-versions.sh
+      - name: Third-party notices present
+        run: test -f THIRD_PARTY_NOTICES.md && test -f LICENSE

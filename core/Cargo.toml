@@ -1,0 +1,121 @@
+[package]
+name = "transcriber-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.80"
+description = "Reusable native engine for dual-source local speech transcription (whisper + parakeet)"
+license = "MIT"
+
+[lib]
+name = "transcriber_core"
+# staticlib/cdylib are needed for the Apple xcframework and Android .so.
+# rlib keeps it usable as a normal Rust dependency (tests, CLI harness).
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[features]
+# Pure logic + SQLite store + optional HTTP API + downloader + a mock ASR backend.
+# This default set builds and tests WITHOUT any heavy ML runtime.
+default = ["store", "api", "download", "mock-asr"]
+store = ["dep:rusqlite"]
+api = ["dep:tiny_http", "store"]
+download = ["dep:ureq", "dep:sha2", "dep:hex"]
+mock-asr = []
+# Real cross-platform ASR runtime (ONNX Runtime via sherpa). Heavy; off by default.
+sherpa = ["dep:sherpa-rs"]
+# whisper.cpp (ggml) ASR runtime via whisper-rs. Consumes the ggml `.bin`
+# weights that `model_manager` already downloads. The whisper-rs `metal`
+# feature gives the Apple GPU fast path; CPU is the portable fallback. Heavy
+# (builds native whisper.cpp via cmake); off by default.
+whispercpp = ["dep:whisper-rs"]
+# Apple-only fast path (CoreML / ANE) behind the same AsrBackend trait.
+coreml = []
+# UniFFI bindings for Swift/Kotlin. Enabled by the platform shells.
+ffi = ["dep:uniffi", "uniffi/cli"]
+# Optional alternative VAD (kept for parity with the legacy WebRTC engine).
+webrtc-vad = ["dep:webrtc-vad"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+log = "0.4"
+parking_lot = "0.12"
+crossbeam-channel = "0.5"
+rtrb = "0.3"
+regex = "1"
+once_cell = "1"
+chrono = { version = "0.4", features = ["serde"] }
+# stderr (fd 2) capture for crash diagnostics (diag.rs).
+libc = "0.2"
+
+# Optional, gated by features
+rusqlite = { version = "0.31", features = ["bundled"], optional = true }
+tiny_http = { version = "0.12", optional = true }
+ureq = { version = "2", features = ["json", "tls"], optional = true }
+sha2 = { version = "0.10", optional = true }
+hex = { version = "0.4", optional = true }
+uniffi = { version = "0.28", optional = true }
+sherpa-rs = { version = "0.6", optional = true }
+# whisper.cpp bindings. `metal` enables the Apple GPU backend (with a runtime
+# `use_gpu` toggle); on non-Apple targets the CPU path is used regardless.
+whisper-rs = { version = "0.16", optional = true, features = ["metal"] }
+webrtc-vad = { version = "0.4", optional = true }
+
+# Политика линтов крейта, зафиксированная в манифесте (Rust 1.74+), чтобы она
+# была одинаковой у `cargo clippy` локально и в CI, а не жила только в
+# командной строке workflow.
+#
+# ВАЖНО: CI гоняет `cargo clippy --all-targets -- -D warnings`, и `-D warnings`
+# применяется ПОСЛЕ уровней отсюда. Поэтому любой линт, поднятый здесь до
+# "warn" и реально срабатывающий, ломает CI. Секция сознательно повторяет
+# уровни ПО УМОЛЧАНИЮ: она документирует политику и защищает от случайного
+# ослабления, но не может внезапно «покраснеть» на текущем коде.
+#
+# СОЗНАТЕЛЬНО НЕ ВКЛЮЧЕНО (потребует отдельной уборки кода — отдельной задачей):
+#   clippy::pedantic / clippy::nursery — сотни срабатываний, шум;
+#   clippy::unwrap_used / expect_used  — в ядре есть осознанные unwrap
+#                                        (инварианты, тесты, отравленные
+#                                        мьютексы) — включать только вместе с
+#                                        рефакторингом;
+#   clippy::cargo                      — ругается на метаданные (repository,
+#                                        keywords), это не про код;
+#   rust::missing_docs                 — doc-комментарии есть на публичном API,
+#                                        но не на 100 % элементов;
+#   rust::unsafe_code                  — в diag.rs есть необходимый unsafe
+#                                        (перехват stderr через libc).
+[lints.rust]
+# Проигнорированный Result — источник тихих потерь данных в пайплайне.
+# Уровень по умолчанию; фиксируем явно, чтобы его нельзя было понизить мимоходом.
+unused_must_use = "warn"
+
+[lints.clippy]
+# Уровни по умолчанию, записанные явно. Менять — только осознанно.
+correctness = "deny"
+suspicious = "warn"
+complexity = "warn"
+perf = "warn"
+style = "warn"
+
+[dev-dependencies]
+tempfile = "3"
+# Local HTTP server for downloader behavior tests (retry/resume/sha256).
+tiny_http = "0.12"
+
+[[bin]]
+name = "chronica"
+path = "src/bin/cli.rs"
+required-features = []
+
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+required-features = ["ffi"]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+# "unwind" (не "abort"): ASR-воркер ловит Rust-паники интервала через
+# catch_unwind и продолжает работу вместо падения всего приложения.
+panic = "unwind"
+strip = true
+opt-level = 3

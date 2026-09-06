@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose drives the real theming; this base keeps a dark, edge-to-edge
+         system look and prevents a light splash flash before Compose loads. -->
+    <style name="Theme.Transcriber" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#FF101014</item>
+        <item name="android:navigationBarColor">#FF101014</item>
+        <item name="android:windowBackground">#FF101014</item>
+    </style>
+</resources>
