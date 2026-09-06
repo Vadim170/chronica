@@ -120,11 +120,13 @@ final class EngineDataIsolationTests: XCTestCase {
             .first!
     }
 
+    /// Есть ли каталог. Намеренно НЕ смотрим `modificationDate`: приложение
+    /// владельца может быть запущено и писать в свою папку прямо во время
+    /// прогона — тогда сравнение времён краснело бы без всякой вины теста.
+    /// Проверяемый сценарий (переименование живой папки) меняет именно
+    /// СУЩЕСТВОВАНИЕ обоих каталогов, а его этот снимок ловит полностью.
     private func snapshot(_ url: URL) -> String {
-        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
-        guard let attrs else { return "absent" }
-        let date = (attrs[.modificationDate] as? Date)?.timeIntervalSince1970 ?? -1
-        return "present:\(date)"
+        FileManager.default.fileExists(atPath: url.path) ? "present" : "absent"
     }
 
     func testIsolatedEngineLeavesTheRealApplicationSupportUntouched() {

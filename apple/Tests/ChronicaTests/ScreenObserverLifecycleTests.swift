@@ -32,7 +32,10 @@ final class ScreenObserverLifecycleTests: XCTestCase {
         // Старый describe игнорирует cancellation и всё ещё ждёт. Новое
         // поколение всё равно должно войти в свой тик и сохранить fresh.
         try await waitUntil(timeout: 3) { describer.snapshot().calls >= 2 }
-        XCTAssertEqual(describer.snapshot().maxActive, 2)
+        // Важно, что старый describe НЕ блокирует новое поколение, то есть их
+        // было хотя бы двое одновременно. Точное равенство сюда добавляло бы
+        // зависимость от того, сколько тиков успел сделать наблюдатель.
+        XCTAssertGreaterThanOrEqual(describer.snapshot().maxActive, 2)
         try await waitUntil(timeout: 3) {
             observer.activities(from: .distantPast, to: .distantFuture).count == 1
         }

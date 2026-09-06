@@ -76,7 +76,8 @@ final class MetricFormatTests: XCTestCase {
     func testDroppedIntervalsAreNamedWithTheirCount() throws {
         let line = try XCTUnwrap(Fmt.droppedIntervalsLine(3))
         XCTAssertEqual(line, L("metric.droppedIntervals", 3))
-        XCTAssertTrue(line.contains("3"), "число потерянных интервалов обязано быть в строке")
+        XCTAssertTrue(line.contains(L10nTestSupport.localizedNumber(3)),
+                      "число потерянных интервалов обязано быть в строке")
     }
 
     // MARK: сводка по хранилищу
@@ -87,8 +88,10 @@ final class MetricFormatTests: XCTestCase {
         XCTAssertEqual(line, L("metric.storeLine",
                                "42 \(L("unit.megabytes"))",
                                L("metric.records", 137)))
+        // «42» приходит из `memBytes` (не локализуется), «137» — через
+        // локализованный формат, поэтому его цифры региональные.
         XCTAssertTrue(line.contains("42"))
-        XCTAssertTrue(line.contains("137"))
+        XCTAssertTrue(line.contains(L10nTestSupport.localizedNumber(137)))
     }
 
     func testStoreLineCountsWalTowardsDiskUsage() {

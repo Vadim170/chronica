@@ -8,6 +8,14 @@ import XCTest
 @MainActor
 final class PopoverPerformanceTests: XCTestCase {
 
+    /// Календарь с фиксированной зоной: число заголовков дня в ленте не должно
+    /// зависеть от таймзоны машины прогона.
+    private static let utc: Calendar = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        return calendar
+    }()
+
     private func interval(id: Int64, text: String = "speech") -> IntervalRecord {
         IntervalRecord(
             id: id,
@@ -85,7 +93,7 @@ final class PopoverPerformanceTests: XCTestCase {
             })
 
         let items = await sources.load(intervalLimit: 50, sessionLimit: 10,
-                                       rowLimit: 80, now: now)
+                                       rowLimit: 80, now: now, calendar: Self.utc)
 
         XCTAssertEqual(kinds(items), ["day", "activity", "line"],
                        "дело и реплика идут одной лентой, новое сверху")
@@ -110,7 +118,7 @@ final class PopoverPerformanceTests: XCTestCase {
             })
 
         let items = await sources.load(intervalLimit: 50, sessionLimit: 10,
-                                       rowLimit: 80, now: now)
+                                       rowLimit: 80, now: now, calendar: Self.utc)
 
         XCTAssertEqual(kinds(items), ["day", "activity"])
         XCTAssertEqual(asked.range?.from,
@@ -129,7 +137,7 @@ final class PopoverPerformanceTests: XCTestCase {
             activities: nil)
 
         let items = await sources.load(intervalLimit: 50, sessionLimit: 10,
-                                       rowLimit: 80, now: now)
+                                       rowLimit: 80, now: now, calendar: Self.utc)
 
         XCTAssertEqual(kinds(items), ["day", "line"],
                        "выключенный журнал экрана не добавляет в ленту ничего")
@@ -148,7 +156,7 @@ final class PopoverPerformanceTests: XCTestCase {
             })
 
         let items = await sources.load(intervalLimit: 50, sessionLimit: 10,
-                                       rowLimit: 4, now: now)
+                                       rowLimit: 4, now: now, calendar: Self.utc)
 
         XCTAssertEqual(items?.count, 4)
         XCTAssertTrue(kinds(items).contains("activity"))
@@ -210,7 +218,7 @@ final class PopoverPerformanceTests: XCTestCase {
             live: { engine.liveFeed },
             activities: loadActivities)
         let items = await sources.load(intervalLimit: 50, sessionLimit: 10,
-                                       rowLimit: 80, now: now)
+                                       rowLimit: 80, now: now, calendar: Self.utc)
 
         XCTAssertEqual(kinds(items), ["day", "activity"])
         withExtendedLifetime(store) {}

@@ -113,8 +113,10 @@ final class ModelCatalogTests: XCTestCase {
         XCTAssertEqual(ModelCatalog.languages(family: "whisper"),
                        L("models.languages.whisper", ModelCatalog.whisperLanguages))
         // Число языков обязано быть в подписи — оно и есть смысл строки.
-        XCTAssertTrue(ModelCatalog.languages(family: "parakeet").contains("25"))
-        XCTAssertTrue(ModelCatalog.languages(family: "whisper").contains("99"))
+        XCTAssertTrue(ModelCatalog.languages(family: "parakeet")
+            .contains(L10nTestSupport.localizedNumber(ModelCatalog.parakeetLanguages)))
+        XCTAssertTrue(ModelCatalog.languages(family: "whisper")
+            .contains(L10nTestSupport.localizedNumber(ModelCatalog.whisperLanguages)))
     }
 
     /// Размер до скачивания: у Parakeet известен, у остальных — честное

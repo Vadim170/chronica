@@ -50,6 +50,17 @@ enum L10nTestSupport {
         return String(format: format, locale: Locale(identifier: language),
                       arguments: arguments)
     }
+
+    /// Число в том виде, в каком его печатает ИНТЕРФЕЙС.
+    ///
+    /// Система счисления — региональная настройка пользователя: при
+    /// `@numbers=arab` «137» выглядит как «١٣٧», при `@numbers=hanidec` — как
+    /// «一三七». Поэтому искать в локализованной строке латинские цифры нельзя:
+    /// на такой машине их там законно нет. Тесты, которым важно «число попало
+    /// в строку», сравнивают с этим представлением.
+    static func localizedNumber(_ value: Int) -> String {
+        String(format: "%lld", locale: Bundle.stringsLocale, value)
+    }
 }
 
 // =============================================================================
@@ -243,19 +254,112 @@ final class LocalizationLookupTests: XCTestCase {
         XCTAssertEqual(Bundle.stringsLocale.language.languageCode?.identifier,
                        Bundle.appLanguage,
                        "локаль подстановки обязана говорить на языке интерфейса")
+        // Регион сравниваем с ФАКТИЧЕСКИМ регионом машины, каким бы он ни был,
+        // включая «не задан» (`nil == nil`): проверяется сохранение, а не
+        // конкретная страна.
         XCTAssertEqual(Bundle.stringsLocale.region, Locale.current.region,
                        "регион пользователя (разделители, календарь) сохраняется")
         // Рантайм-результат совпадает с формой для языка интерфейса.
+        //
+        // Эталон считаем в ТОЙ ЖЕ подстановочной локали, а не в голой
+        // `Locale(identifier:)`: иначе тест сверял бы заодно и написание цифр,
+        // а оно законно региональное (при `numbers=arab` пользователь видит
+        // «١ record», и это правильно). Проверяется выбор ФОРМЫ по языку
+        // интерфейса, а не система счисления.
+        let interfaceFormat = try L10nTestSupport.string("metric.records",
+                                                         language: Bundle.appLanguage)
         for count in [1, 3, 5, 11, 21] {
             XCTAssertEqual(L("metric.records", count),
-                           try L10nTestSupport.format("metric.records",
-                                                      language: Bundle.appLanguage, count))
+                           String(format: interfaceFormat,
+                                  locale: Bundle.stringsLocale, arguments: [count]))
         }
         // И три русские формы действительно различаются.
         let forms = try [1, 3, 5].map {
             try L10nTestSupport.format("metric.records", language: "ru", $0)
         }
         XCTAssertEqual(Set(forms).count, 3, "русские one/few/many дают разные формы")
+    }
+
+    /// Тот же инвариант, но на ЯВНО заданных локалях-входах: настройки машины
+    /// прогона не участвуют вовсе.
+    ///
+    /// Подмена языка обязана менять ТОЛЬКО язык. Регион — это разделители
+    /// чисел, календарь и единицы; он живёт субтегом ЯЗЫКА (`en_US` →
+    /// languageComponents.region == US), поэтому замена языковых компонент
+    /// целиком молча стирала его у всех, кроме машин с отдельным «Регионом» в
+    /// Системных настройках (там он приезжает ключом `@rg=` и уцелевал). Ровно
+    /// поэтому баг не был виден локально и вылез только на CI.
+    func testInterfaceLanguageSwapKeepsTheUserRegion() {
+        // Регион есть; отдельный «Регион» в настройках; экзотическая
+        // письменность; посторонние ключи локали.
+        let withRegion = ["en_US", "ru_RU", "en_RU", "en_GB", "ru_KZ", "en_001",
+                          "zh_Hans_CN", "en_US@rg=ruzzzz", "en_US@calendar=japanese"]
+        // Региона нет вовсе — как у части машин CI.
+        let withoutRegion = ["en", "ru"]
+
+        for baseId in withRegion + withoutRegion {
+            let base = Locale(identifier: baseId)
+            for language in L10nTestSupport.languages {
+                let locale = Bundle.stringsLocale(base: base, language: language)
+                XCTAssertEqual(locale.language.languageCode?.identifier, language,
+                               "\(baseId) → \(language): язык интерфейса не подставился")
+                XCTAssertEqual(locale.region, base.region,
+                               "\(baseId) → \(language): регион пользователя обязан уцелеть")
+            }
+        }
+
+        // Наблюдаемое следствие: пока регион задан, разделитель дробной части
+        // остаётся региональным и от языка интерфейса не зависит. Это та самая
+        // «1,234.5 вместо 1 234,5», которую ловит инвариант.
+        for baseId in withRegion {
+            let base = Locale(identifier: baseId)
+            for language in L10nTestSupport.languages {
+                let locale = Bundle.stringsLocale(base: base, language: language)
+                XCTAssertEqual(locale.decimalSeparator, base.decimalSeparator,
+                               "\(baseId) → \(language): разделитель дробной части — "
+                               + "региональная настройка, язык её не меняет")
+                XCTAssertEqual(locale.groupingSeparator, base.groupingSeparator,
+                               "\(baseId) → \(language): разделитель разрядов тоже региональный")
+            }
+        }
+    }
+
+    /// Наблюдаемый симптом потери региона — счётчики от тысячи.
+    ///
+    /// `String(format:locale:)` применяет к `%lld` и разделитель разрядов, и
+    /// письменность цифр, а в интерфейсе есть счётчики, которые легко
+    /// переваливают за тысячу («N записей» в сводке хранилища). Значит разряды
+    /// обязаны группироваться по-РЕГИОНАЛЬНОМУ даже тогда, когда интерфейс на
+    /// другом языке. Эталон — та же база: ни один разделитель не зашит.
+    func testThousandsAreGroupedByRegionNotByInterfaceLanguage() {
+        for (baseId, language) in [("en_US", "ru"), ("ru_RU", "en"), ("de_DE", "en"),
+                                   ("de_DE", "ru"), ("en_US", "en"), ("ru_RU", "ru")] {
+            let base = Locale(identifier: baseId)
+            let locale = Bundle.stringsLocale(base: base, language: language)
+            for value in [1234, 1_234_567] {
+                XCTAssertEqual(String(format: "%lld", locale: locale, value),
+                               String(format: "%lld", locale: base, value),
+                               "\(baseId) → \(language): \(value) обязано группироваться "
+                               + "по региону пользователя, а не по языку интерфейса")
+            }
+        }
+    }
+
+    /// Формы слова определяются ЯЗЫКОМ подстановочной локали и не зависят от
+    /// того, какой регион у пользователя.
+    func testPluralFormsDependOnLanguageAndNotOnRegion() throws {
+        let ruFormat = try L10nTestSupport.string("metric.records", language: "ru")
+        let expected = try [1, 3, 5].map {
+            try L10nTestSupport.format("metric.records", language: "ru", $0)
+        }
+        for baseId in ["en_US", "ru_RU", "en_001", "zh_Hans_CN", "en"] {
+            let locale = Bundle.stringsLocale(base: Locale(identifier: baseId), language: "ru")
+            let forms = [1, 3, 5].map {
+                String(format: ruFormat, locale: locale, arguments: [$0])
+            }
+            XCTAssertEqual(forms, expected,
+                           "\(baseId): русские one/few/many не должны зависеть от региона")
+        }
     }
 
     /// Промпт vision-модели следует языку ИНТЕРФЕЙСА: журнал экрана не должен

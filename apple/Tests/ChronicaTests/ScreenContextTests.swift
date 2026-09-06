@@ -104,23 +104,45 @@ final class ScreenContextTests: XCTestCase {
 
     // MARK: VisionPrompt
 
-    func testPromptIncludesContext() {
+    func testPromptIncludesContext() throws {
         let p = VisionPrompt.build(app: "Xcode", windowTitle: "Engine.swift")
         XCTAssertTrue(p.contains("Xcode"))
         XCTAssertTrue(p.contains("Engine.swift"))
         // Просим ровно 1–2 предложения — иначе модель пишет эссе.
-        XCTAssertTrue(p.contains("1–2"))
+        //
+        // Ограничение проверяем во ВСЕХ локализациях сразу. Промпт строится
+        // через `LApp`, то есть на языке ИНТЕРФЕЙСА: проверь мы только
+        // построенную строку — правка одной локализации роняла бы прогон лишь
+        // на машинах с этим языком (у CI английский, у разработчика русский), а
+        // это ровно тот сорт «зелено локально, красно в CI», который уже
+        // стоил нам трёх кругов.
+        let limit = "1–2"
+        for language in L10nTestSupport.languages {
+            XCTAssertTrue(try L10nTestSupport.string("vision.prompt.body",
+                                                     language: language).contains(limit),
+                          "\(language): промпт обязан ограничивать ответ \(limit) предложениями")
+        }
+        XCTAssertTrue(p.contains(limit))
     }
 
     func testPromptOmitsEmptyTitle() throws {
         let withTitle = VisionPrompt.build(app: "Finder", windowTitle: "Downloads")
         let withoutTitle = VisionPrompt.build(app: "Finder", windowTitle: "")
         XCTAssertTrue(withTitle.contains("Downloads"))
-        // Блока про заголовок окна не должно быть вовсе (не пустые кавычки).
-        let marker = try L10nTestSupport.string("vision.prompt.window",
+        // Маркер блока про окно — самый длинный литеральный кусок формата
+        // вокруг подстановки. Берём именно кусок, а не строку с вырезанным
+        // `%@`: положение подстановки в переводе может быть любым, а обрезка
+        // пунктуации у формата вида «%@ — заголовок окна» оставила бы пустой
+        // маркер, и проверка ниже молча перестала бы что-либо проверять.
+        let format = try L10nTestSupport.string("vision.prompt.window",
                                                 language: Bundle.appLanguage)
-            .replacingOccurrences(of: "%@", with: "")
-        XCTAssertFalse(withoutTitle.contains(marker.trimmingCharacters(in: .punctuationCharacters)),
+        let marker = try XCTUnwrap(format.components(separatedBy: "%@")
+            .max(by: { $0.count < $1.count }))
+            .trimmingCharacters(in: .whitespaces)
+        XCTAssertFalse(marker.isEmpty, "маркер блока про окно обязан быть непустым")
+        XCTAssertTrue(withTitle.contains(marker),
+                      "с заголовком блок про окно обязан присутствовать")
+        XCTAssertFalse(withoutTitle.contains(marker),
                        "пустой заголовок не должен добавлять блок про окно")
     }
 

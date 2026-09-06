@@ -60,11 +60,34 @@ extension Bundle {
     /// «3 интервалов» (русские `few`/`many` схлопывались в английский `other`).
     /// Так бывает ровно в том сценарии, ради которого локализация и делается:
     /// язык одного приложения выбран в Системных настройках → Приложения.
-    static let stringsLocale: Locale = {
-        var components = Locale.Components(locale: .current)
-        components.languageComponents = .init(identifier: Bundle.appLanguage)
+    static let stringsLocale: Locale = stringsLocale(base: .current,
+                                                     language: Bundle.appLanguage)
+
+    /// Та же сборка, но на ЯВНЫХ входах: региональные настройки берутся из
+    /// `base`, язык — из `language`.
+    ///
+    /// Вынесено чистой функцией, чтобы инвариант «регион пользователя
+    /// сохраняется» проверялся на заданных локалях, а не на настройках машины,
+    /// где идёт прогон (у CI региона может не быть вовсе).
+    static func stringsLocale(base: Locale, language: String) -> Locale {
+        var components = Locale.Components(locale: base)
+        // Подменяем ТОЛЬКО язык и его письменность. Присваивать
+        // `languageComponents` целиком нельзя: регион у локали живёт субтегом
+        // ЯЗЫКА (`en_US` → languageComponents.region == US), и такая замена
+        // стирала регион всюду, кроме машин с отдельным «Регионом» в
+        // Системных настройках (там он приезжает ключом `@rg=` и уцелевал).
+        //
+        // Пользователь это видел: `String(format:locale:)` применяет к `%lld`
+        // и разделитель разрядов, и письменность цифр. У кого регион и язык
+        // интерфейса расходятся (русский интерфейс с регионом США и наоборот —
+        // тот самый сценарий, ради которого локализация и делается), счётчики
+        // от тысячи печатались разделителем ЯЗЫКА, а не региона: «1,234 записи»
+        // вместо «1 234 записи».
+        let interface = Locale.Language(identifier: language)
+        components.languageComponents.languageCode = interface.languageCode
+        components.languageComponents.script = interface.script
         return Locale(components: components)
-    }()
+    }
 }
 
 /// Локализованная строка по стабильному семантическому ключу.

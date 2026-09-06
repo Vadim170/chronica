@@ -100,8 +100,12 @@ struct PopoverFeedSources {
     /// - Returns: элементы ленты (новые сверху, не длиннее `rowLimit`) или
     ///   `nil`, если задачу отменили — панель скрыли, и результат уже никому
     ///   не нужен.
+    /// - Parameter calendar: календарь для заголовков дня. Дефолт — календарь
+    ///   пользователя; тесты передают фиксированную зону, чтобы число
+    ///   разделителей не зависело от настроек машины прогона.
     func load(intervalLimit: UInt32, sessionLimit: UInt32, rowLimit: Int,
-              now: Date = Date()) async -> [JournalFeedItem]? {
+              now: Date = Date(),
+              calendar: Calendar = .current) async -> [JournalFeedItem]? {
         let stored = await recentIntervals(intervalLimit)
         guard !Task.isCancelled else { return nil }
         let sessions = await recentSessions(sessionLimit)
@@ -119,7 +123,7 @@ struct PopoverFeedSources {
         // свою высоту, а не каждый источник по отдельности.
         return JournalFeed.capped(
             JournalFeed.build(intervals: intervals, activities: screenActivities,
-                              sessions: sessions, now: now),
+                              sessions: sessions, now: now, calendar: calendar),
             limit: rowLimit)
     }
 }
