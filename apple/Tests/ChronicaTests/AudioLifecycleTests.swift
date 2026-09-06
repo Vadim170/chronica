@@ -69,7 +69,7 @@ final class AudioLifecycleTests: XCTestCase {
         let core = TestCore()
         let capture = TestCapture()
         capture.failNextStart = true
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
 
         engine.loadModelAndStart()
         await waitUntil {
@@ -107,7 +107,7 @@ final class AudioLifecycleTests: XCTestCase {
         let release = DispatchSemaphore(value: 0)
         let core = TestCore(startGate: release, startEntered: entered)
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
 
         engine.loadModelAndStart()
         await waitUntil { entered.value }
@@ -142,7 +142,7 @@ final class AudioLifecycleTests: XCTestCase {
         let core = TestCore(stopGate: releaseStop, stopEntered: stopEntered)
         let capture = TestCapture()
         capture.failNextStart = true
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
 
         engine.loadModelAndStart()
         await waitUntil { engine.state == .error }
@@ -205,14 +205,21 @@ final class AudioLifecycleTests: XCTestCase {
     }
 
     func testWatchdogStopsCaptureWhenMetricsFreeze() async throws {
+        let watchdog = TestWatchdogClock()
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 0.05, watchdogPollS: 0.01)
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
+                                        watchdog: watchdog)
 
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
-        await waitUntil(timeout: 3) { engine.pipelineStalled }
+        // Пока часы стоят, сторож молчит: сессия успевает встать на ноги, а не
+        // гибнет от того, что раннер задумался между двумя строчками теста.
+        XCTAssertFalse(engine.pipelineStalled)
+
+        // Ни одной метрики за время больше таймаута — вот это зависание.
+        watchdog.advance(13)
+        await waitUntil { engine.pipelineStalled }
 
         XCTAssertTrue(engine.needsRestart)
         XCTAssertEqual(engine.state, .error)
@@ -223,52 +230,43 @@ final class AudioLifecycleTests: XCTestCase {
     }
 
     func testWatchdogAcceptsFreshProgressWithoutFalseStall() async throws {
-        // Время сторожа полностью виртуальное: и монотонные часы, и его «сон»
-        // под контролем теста. Реальные задержки не участвуют, поэтому
-        // медленная машина не может превратить свежий прогресс в зависание.
-        let clock = TestWatchdogClock()
+        let watchdog = TestWatchdogClock()
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 0.08, watchdogPollS: 0.01,
-                                        monotonicClock: { clock.now },
-                                        watchdogSleep: { _ in await clock.sleep() })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
+                                        watchdog: watchdog)
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
-        await waitUntil { clock.sleepCount >= 1 }
 
-        // Десять проверок сторожа. Каждая видит метрику возрастом 0.02с — это
-        // МЕНЬШЕ таймаута 0.08с, а суммарно проходит 0.2с, то есть ВДВОЕ
-        // больше таймаута. Если бы свежая метрика не считалась признаком
-        // жизни, возраст дорос бы до 0.08с и сторож соврал бы на пятом шаге.
+        // Десять проверок сторожа. Каждая видит метрику возрастом 5 виртуальных
+        // секунд — МЕНЬШЕ таймаута 12с, — а суммарно проходит 50с, вчетверо
+        // больше таймаута. Если бы свежая метрика не считалась признаком жизни,
+        // возраст перевалил бы за 12с и сторож соврал бы на третьем шаге.
         for index in 0..<10 {
-            let checksBefore = clock.sleepCount
+            let wakeupsBefore = watchdog.wakeups
             engine.receive(.metrics(snapshot: Self.snapshot(elapsed: Float(index))))
-            clock.advance(0.02)
-            clock.releaseOneCheck()
-            await waitUntil { clock.sleepCount > checksBefore }
+            watchdog.advance(5)
+            await waitForWatchdogCheck(watchdog, after: wakeupsBefore)
             XCTAssertFalse(engine.pipelineStalled,
                            "свежая метрика на шаге \(index) не должна читаться как зависание")
         }
         XCTAssertEqual(engine.state, .recording)
 
-        // Контроль настройки: сторож всё это время был живым и вооружённым —
-        // стоит метрикам замолчать на время больше таймаута, он срабатывает.
-        // Без этой проверки «нет ложного зависания» доказывалось бы и
-        // выключенным сторожем.
-        clock.advance(0.2)
-        clock.releaseOneCheck()
+        // Контроль настройки: сторож всё это время был вооружён и живым —
+        // стоит метрикам замолчать дольше таймаута, он срабатывает. Без этой
+        // проверки «нет ложного зависания» доказывалось бы и выключенным
+        // сторожем.
+        watchdog.advance(13)
         await waitUntil { engine.pipelineStalled }
-
         engine.stop()
-        // Отпускаем спящего сторожа: отменённая задача обязана выйти сама.
-        clock.releaseOneCheck()
     }
 
     func testTransientQueueFullWarningKeepsRecordingAndCapture() async throws {
+        let watchdog = TestWatchdogClock()
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
+                                        watchdog: watchdog)
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
         let generation = try XCTUnwrap(engine.sessionGenerationForTesting)
@@ -276,10 +274,15 @@ final class AudioLifecycleTests: XCTestCase {
         engine.receive(.error(code: .internal, message: "ASR queue full; interval dropped"),
                        generation: generation)
 
+        // Очередь тут же разгружается, и дальше пульс идёт с незаполненной
+        // очередью. Виртуального времени проходит 50с — вчетверо больше
+        // таймаута: разовое предупреждение не имеет права накопиться в стоп.
         for _ in 0..<10 {
+            let wakeupsBefore = watchdog.wakeups
             engine.receive(.metrics(snapshot: Self.snapshot(elapsed: 0, queueDepth: 0)),
                            generation: generation)
-            try await Task.sleep(nanoseconds: 10_000_000)
+            watchdog.advance(5)
+            await waitForWatchdogCheck(watchdog, after: wakeupsBefore)
         }
 
         XCTAssertEqual(engine.state, .recording)
@@ -291,54 +294,59 @@ final class AudioLifecycleTests: XCTestCase {
     }
 
     func testSustainedQueueFullStopsCaptureAfterMonotonicDeadline() async throws {
+        let watchdog = TestWatchdogClock()
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 0.05, watchdogPollS: 0.01)
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
+                                        watchdog: watchdog)
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
         let generation = try XCTUnwrap(engine.sessionGenerationForTesting)
         engine.receive(.error(code: .internal, message: "ASR queue full; interval dropped"),
                        generation: generation)
 
-        // Heartbeats continue, but the queue stays saturated. This is an ASR
-        // stall, distinct from a missing worker heartbeat.
-        for _ in 0..<10 {
-            engine.receive(.metrics(snapshot: Self.snapshot(elapsed: 0, queueDepth: 4)),
-                           generation: generation)
-            try await Task.sleep(nanoseconds: 10_000_000)
-        }
-        await waitUntil(timeout: 3) { engine.pipelineStalled }
+        // Пульс продолжает идти (метрика свежая, возраст 0), но очередь всё
+        // это время забита под завязку. Это зависание ASR, а не пропажа
+        // heartbeat'а воркера, — и ловится оно по своему сроку.
+        watchdog.advance(13)
+        engine.receive(.metrics(snapshot: Self.snapshot(elapsed: 0, queueDepth: 4)),
+                       generation: generation)
+
+        await waitUntil { engine.pipelineStalled }
         XCTAssertTrue(engine.needsRestart)
         XCTAssertFalse(capture.running)
+        XCTAssertEqual(engine.lastError,
+                       L("error.pipelineStalled", L("stall.queueSaturated")),
+                       "причина обязана быть «очередь», а не «нет метрик»")
     }
 
     func testWatchdogUsesMonotonicClockInsteadOfWallClock() async throws {
         var wall = Date()
-        var monotonic: UInt64 = 0
+        let watchdog = TestWatchdogClock()
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 0.05, watchdogPollS: 0.01,
-                                        clock: { wall },
-                                        monotonicClock: { monotonic })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
+                                        watchdog: watchdog, clock: { wall })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
 
-        // A wall-clock jump must not make a healthy, unchanged monotonic
-        // clock look stale.
+        // Скачок СТЕННЫХ часов (перевод времени, возврат из сна) не должен
+        // выглядеть зависанием: монотонные часы не сдвинулись. Дожидаемся
+        // именно факта проверки сторожем, а не «прошло сколько-то времени».
+        let wakeupsBefore = watchdog.wakeups
         wall = wall.addingTimeInterval(86_400)
-        try await Task.sleep(nanoseconds: 100_000_000)
+        await waitForWatchdogCheck(watchdog, after: wakeupsBefore)
         XCTAssertFalse(engine.pipelineStalled)
 
-        monotonic = 100_000_000
-        await waitUntil(timeout: 3) { engine.pipelineStalled }
+        // А ход МОНОТОННЫХ часов за таймаут — уже зависание.
+        watchdog.advance(13)
+        await waitUntil { engine.pipelineStalled }
     }
 
     func testStaleStateEventCannotOverwriteActiveRecording() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
 
@@ -362,7 +370,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testVoiceActivityBumpsRevisionAndFeedIsResetOnNewSession() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
         let before = engine.activityRevision
@@ -386,7 +394,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testCoreSinkDropsFramesOutsideActiveSession() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.pushFrame(channel: Engine.micChannel, pcm: [1], sampleRate: 16_000, channels: 1)
         XCTAssertEqual(core.pushCalls, 0)
 
@@ -404,8 +412,9 @@ final class AudioLifecycleTests: XCTestCase {
         let core = TestCore()
         let capture = TestCapture()
         var restarted = false
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 10, watchdogPollS: 1,
+        // Зависание тут приходит от СБОЯ ЗАХВАТА, а не по сроку: виртуальные
+        // часы сторожа так и остаются на нуле.
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
                                         restartHandler: { restarted = true })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
@@ -418,8 +427,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testDelayedOldGenerationCallbacksAreIgnoredAfterRestart() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 10, watchdogPollS: 1)
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
         let oldGeneration = try XCTUnwrap(engine.sessionGenerationForTesting)
@@ -454,13 +462,18 @@ final class AudioLifecycleTests: XCTestCase {
         var completion: ((Bool) -> Void)?
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
-                                        watchdogTimeoutS: 0.05, watchdogPollS: 0.01,
+        let watchdog = TestWatchdogClock()
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
+                                        watchdog: watchdog,
                                         relaunchHandler: { callback in
                                             launchCount += 1
                                             completion = callback
                                         })
+        // Нужно состояние «конвейер встал»: сначала дожидаемся живой сессии,
+        // потом СОЗДАЁМ зависание сдвигом виртуальных часов.
         engine.loadModelAndStart()
+        await waitUntil { engine.state == .recording }
+        watchdog.advance(13)
         await waitUntil { engine.pipelineStalled }
 
         engine.restartApplication()
@@ -480,7 +493,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testModelProgressReachesUIWhileIdleButSessionEventsDoNot() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
 
         // Простой: сессии нет, но скачивание модели идёт и обязано быть видно.
         engine.receive(.modelProgress(status: Self.modelStatus(id: "parakeet", pct: 42)),
@@ -498,7 +511,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testModelProgressIsAcceptedDuringRecordingRegardlessOfGeneration() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
 
@@ -515,7 +528,7 @@ final class AudioLifecycleTests: XCTestCase {
         let core = TestCore()
         let capture = TestCapture()
         let permission = TestMicPermission(status: .notDetermined)
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
                                         micPermission: permission)
 
         engine.loadModelAndStart()
@@ -535,7 +548,7 @@ final class AudioLifecycleTests: XCTestCase {
         let core = TestCore()
         let capture = TestCapture()
         let permission = TestMicPermission(status: .denied)
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture },
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture },
                                         micPermission: permission)
 
         engine.loadModelAndStart()
@@ -551,7 +564,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testSleepStopsCaptureAndWakeRearmsTheSameSession() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture }, wakeRetryDelayS: 0.01)
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture }, wakeRetryDelayS: 0.01)
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
         let generation = try XCTUnwrap(engine.sessionGenerationForTesting)
@@ -575,7 +588,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testWakeRetriesThenRestartsSessionInsteadOfStickingInRestartState() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture }, wakeRetryDelayS: 0.01)
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture }, wakeRetryDelayS: 0.01)
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
 
@@ -594,7 +607,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testSuspendIsIgnoredWhenNotRecording() {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.suspendForSleep()
         XCTAssertFalse(engine.isSuspendedForSleep)
         engine.resumeAfterWake()
@@ -606,7 +619,7 @@ final class AudioLifecycleTests: XCTestCase {
     func testSourceToggleDuringRecordingRequiresRestartAndIsHonestAboutIt() async throws {
         let core = TestCore()
         let capture = TestCapture()
-        let engine = makeIsolatedEngine(core: core, captureFactory: { capture })
+        let engine = makeWatchdogEngine(core: core, captureFactory: { capture })
         engine.loadModelAndStart()
         await waitUntil { engine.state == .recording }
         XCTAssertFalse(engine.sourceChangeRequiresRestart)
@@ -702,10 +715,54 @@ final class AudioLifecycleTests: XCTestCase {
                                droppedIntervals: droppedIntervals)
     }
 
-    /// Ожидание УСЛОВИЯ с дедлайном (а не фиксированная пауза): дедлайн взят с
-    /// большим запасом, потому что на медленном раннере CI планировщик отдаёт
-    /// главный актор заметно позже. Проверку это не ослабляет — условие всё
-    /// равно обязано стать истинным.
+    /// `Engine`, у которого ВРЕМЯ СТОРОЖА виртуальное.
+    ///
+    /// Все тесты класса создают движок только так. Часы по умолчанию стоят,
+    /// поэтому сторож не может сработать «сам» — ни на быстрой машине, ни на
+    /// раннере, который завис на полминуты между двумя строчками теста. Тест,
+    /// которому нужен стук сторожа, заводит свой `TestWatchdogClock` и двигает
+    /// его `advance` на нужное число ВИРТУАЛЬНЫХ секунд.
+    ///
+    /// `watchdogTimeoutS` тоже задаётся в виртуальных секундах, поэтому дефолт
+    /// оставлен продовым (12с): подгонять его под скорость машины больше незачем.
+    @MainActor
+    private func makeWatchdogEngine(
+        core: TranscriberCore? = nil,
+        captureFactory: (() -> CaptureControlling)? = nil,
+        watchdog: TestWatchdogClock = TestWatchdogClock(),
+        watchdogTimeoutS: TimeInterval = 12,
+        clock: @escaping () -> Date = Date.init,
+        restartHandler: (() -> Void)? = nil,
+        relaunchHandler: ((@escaping (Bool) -> Void) -> Void)? = nil,
+        micPermission: MicPermissionProviding? = nil,
+        wakeRetryDelayS: TimeInterval = 1.5
+    ) -> Engine {
+        makeIsolatedEngine(core: core,
+                           captureFactory: captureFactory,
+                           watchdogTimeoutS: watchdogTimeoutS,
+                           watchdogPollS: 0.01,
+                           clock: clock,
+                           monotonicClock: { watchdog.now },
+                           watchdogSleep: { _ in await watchdog.sleep() },
+                           restartHandler: restartHandler,
+                           relaunchHandler: relaunchHandler,
+                           micPermission: micPermission,
+                           wakeRetryDelayS: wakeRetryDelayS)
+    }
+
+    /// Ждёт, пока сторож ВЫПОЛНИТ хотя бы одну проверку после текущего момента.
+    ///
+    /// Счётчик снимается синхронно, вместе с изменением виртуальных часов,
+    /// поэтому дождавшаяся проверка гарантированно видела новое время. Это
+    /// ожидание ФАКТА (асинхронная задача сделала шаг), а не «пока натикает».
+    private func waitForWatchdogCheck(_ watchdog: TestWatchdogClock,
+                                      after wakeups: Int) async {
+        await waitUntil { watchdog.wakeups > wakeups }
+    }
+
+    /// Ожидание УСЛОВИЯ с дедлайном (а не фиксированная пауза). Дедлайн — лишь
+    /// верхняя граница терпения к планировщику: исход к этому моменту уже
+    /// предопределён виртуальными часами, ждём только завершения задач.
     private func waitUntil(
         timeout: TimeInterval = 5,
         _ predicate: @escaping @MainActor () -> Bool
@@ -725,61 +782,57 @@ private final class EventLog {
     var values: [String] = []
 }
 
-/// Виртуальное время сторожа конвейера: монотонные часы и его «сон» целиком
-/// под контролем теста.
+/// Виртуальные монотонные часы сторожа конвейера.
 ///
-/// Сторож просыпается ровно столько раз, сколько разрешил тест
-/// (`releaseOneCheck`), а часы двигает только `advance`. Поэтому результат не
-/// зависит ни от скорости машины, ни от точности `Task.sleep`.
+/// Возраст метрик и насыщения очереди `Engine` считает по ЭТИМ часам, а они
+/// стоят на месте, пока тест не позовёт `advance`. Отсюда главное свойство:
+/// сколько бы реальных секунд ни съел медленный раннер, сторож не может
+/// объявить зависание сам по себе — а когда тест двигает время за таймаут,
+/// сторож обязан сработать независимо от скорости машины.
+///
+/// Опрос при этом остаётся настоящей асинхронной задачей: `sleep()` — короткая
+/// реальная пауза между проверками. Её длительность на РЕЗУЛЬТАТ не влияет
+/// (решение принимается по виртуальным часам), она задаёт только то, как
+/// быстро тест дождётся уже предопределённого исхода. `wakeups` позволяет
+/// дождаться именно факта очередной проверки, а не «прошло N миллисекунд».
 private final class TestWatchdogClock: @unchecked Sendable {
+    /// Шаг реального опроса. Мелкий — чтобы тесты не ждали, но не нулевой,
+    /// чтобы цикл сторожа не крутился вхолостую на главном акторе.
+    private static let pollNs: UInt64 = 2_000_000
+
     private let lock = NSLock()
     private var nowNs: UInt64 = 0
-    private var sleeps = 0
-    private var waiter: CheckedContinuation<Void, Never>?
-    private var credits = 0
+    private var wakeupCount = 0
 
-    /// Показание монотонных часов (наносекунды).
+    /// Показание виртуальных монотонных часов (наносекунды).
     var now: UInt64 {
         lock.lock(); defer { lock.unlock() }
         return nowNs
     }
 
-    /// Сколько раз сторож уходил спать. Растёт ПОСЛЕ очередной проверки,
-    /// поэтому служит признаком «проверка завершена».
-    var sleepCount: Int {
+    /// Сколько раз сторож уходил спать. Счётчик растёт ПЕРЕД паузой, а очередная
+    /// проверка идёт сразу после неё, поэтому рост счётчика с N до N+1 означает
+    /// «проверка №N выполнена целиком».
+    var wakeups: Int {
         lock.lock(); defer { lock.unlock() }
-        return sleeps
+        return wakeupCount
     }
 
-    /// Двигает виртуальное время вперёд.
+    /// Двигает виртуальное время вперёд на `seconds`.
     func advance(_ seconds: TimeInterval) {
         lock.lock(); nowNs &+= UInt64(seconds * 1_000_000_000); lock.unlock()
     }
 
-    /// Seam вместо `Task.sleep`: сторож ждёт разрешения теста.
+    /// Seam вместо `Task.sleep` в цикле сторожа.
     func sleep() async {
-        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            lock.lock()
-            sleeps += 1
-            if credits > 0 {
-                credits -= 1
-                lock.unlock()
-                continuation.resume()
-            } else {
-                waiter = continuation
-                lock.unlock()
-            }
-        }
+        // Счётчик двигаем отдельным СИНХРОННЫМ методом: брать `NSLock` прямо в
+        // async-функции нельзя (в Swift 6 это ошибка).
+        noteWakeup()
+        try? await Task.sleep(nanoseconds: Self.pollNs)
     }
 
-    /// Разрешает сторожу ровно один цикл проверки.
-    func releaseOneCheck() {
-        lock.lock()
-        let continuation = waiter
-        waiter = nil
-        if continuation == nil { credits += 1 }
-        lock.unlock()
-        continuation?.resume()
+    private func noteWakeup() {
+        lock.lock(); wakeupCount += 1; lock.unlock()
     }
 }
 
